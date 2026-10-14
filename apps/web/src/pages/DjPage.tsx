@@ -24,8 +24,9 @@ import { ConfigPanel } from './dj/ConfigPanel.tsx';
 import { DraftHeader } from './dj/DraftHeader.tsx';
 import { EarlierSets } from './dj/EarlierSets.tsx';
 import { Drawer } from './dj/SetsDrawer.tsx';
+import { SetHeader } from './dj/SetHeader.tsx';
 import { appliedCount, editResult } from './dj/edits.ts';
-import { useAiPass, useDjSet, useLivePreview, useNow, type AiTarget } from './dj/hooks.ts';
+import { contentKey, useAiPass, useDjSet, useLivePreview, useNow, type AiTarget } from './dj/hooks.ts';
 import { SetChart } from './dj/SetChart.tsx';
 import { fmtDuration } from './dj/sheet.ts';
 import { isDraft, suggestSetName, uniqueName } from './dj/saved.ts';
@@ -64,10 +65,16 @@ export function DjPage() {
   const history = useQuery({ queryKey: ['dj', 'sets'], queryFn: () => api<DjSetSummary[]>('/api/dj/sets') });
   /** The Current Set is this draft (opened from Earlier sets or saved from the builder); changes save to it. */
   const [fromDraft, setFromDraft] = useState<{ id: string; name: string } | null>(null);
-  // The current set is restored from the server, with its seed and linked draft.
-  const live = useLivePreview(config, seed, fromDraft, (w) => {
+  /** The Current Set is a copy of this set on Spotify (opened from Saved sets). */
+  const [basedOn, setBasedOn] = useState<{ id: string; name: string; url: string | null } | null>(null);
+  /** The Current Set's name: from its Draft or Spotify set, typed in the header, or "Use this name". */
+  const [setName, setSetName] = useState<string | null>(null);
+  // The current set is restored from the server, with its seed, links and name.
+  const live = useLivePreview(config, seed, { fromDraft, basedOn, name: setName }, (w) => {
     setSeed(w.seed);
     setFromDraft(w.fromDraft);
+    setBasedOn(w.basedOn ?? null);
+    setSetName(w.name ?? w.fromDraft?.name ?? w.basedOn?.name ?? null);
   });
   const [confirmClear, setConfirmClear] = useState(false);
   const built = live.built;
@@ -87,8 +94,6 @@ export function DjPage() {
     live.edit((res) => mergeAiResult(res, r, target.keys));
     return changed;
   });
-  /** The Current Set is a copy of this set on Spotify (opened from Earlier sets). */
-  const [basedOn, setBasedOn] = useState<{ id: string; name: string; url: string | null } | null>(null);
   /** The Saved sets drawer (drafts and sets on Spotify). */
   const [setsOpen, setSetsOpen] = useState(false);
   /** A saved set waiting to be opened, while the user decides about the unsaved Current Set. */
@@ -96,11 +101,6 @@ export function DjPage() {
   /** What the linked draft already holds, so opening it does not save it again. */
   const draftSavedKey = useRef<string | null>(null);
   const [draftSave, setDraftSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  /** A name taken from the AI pass for the next Save draft / Create on Spotify of the Current Set. */
-  const [aiName, setAiName] = useState<string | null>(null);
-  // A new set (Generate, Regenerate, Clear) needs a new name.
-  const currentSeed = live.built?.result.seed ?? null;
-  useEffect(() => setAiName(null), [currentSeed]);
   const aiFor = (kind: AiTarget['kind'], setId?: string, nameAction?: Parameters<typeof AiPassBanner>[0]['nameAction']) => {
     const t = aiPass.target;
     const mine = t != null && t.kind === kind && (t.kind === 'preview' || t.setId === setId);
@@ -154,7 +154,10 @@ export function DjPage() {
     void qc.invalidateQueries({ queryKey: ['dj', 'sets'] });
     void qc
       .fetchQuery({ queryKey: ['dj', 'set', id], queryFn: () => api<DjSetRecord>(`/api/dj/sets/${id}`), staleTime: 0 })
-      .then((r) => setBasedOn((b) => (b?.id === r.id ? { id: r.id, name: r.name, url: r.spotifyUrl } : b)));
+      .then((r) => {
+        setBasedOn((b) => (b?.id === r.id ? { id: r.id, name: r.name, url: r.spotifyUrl } : b));
+        setSetName(r.name);
+      });
   }, [updateJob.data?.status, updateSpotify.data?.setId]);
   // A new preview is a new set: allow creating it.
   useEffect(() => {
@@ -173,6 +176,7 @@ export function DjPage() {
       draftSavedKey.current = draftKey(r.config, r.result);
       setFromDraft({ id: r.id, name: r.name });
       setBasedOn(null);
+      setSetName(r.name);
       setJustSaved(r.id);
     },
   });
@@ -184,6 +188,25 @@ export function DjPage() {
       setFromDraft((d) => (d?.id === r.id ? { id: r.id, name: r.name } : d));
     },
   });
+  /** Renames the Current Set; a linked Draft is renamed on the server at once. */
+  const renameCurrent = (name: string) => {
+    setSetName(name);
+    if (fromDraft) {
+      setFromDraft({ id: fromDraft.id, name });
+      putDraft.mutate({ id: fromDraft.id, body: { name } });
+    }
+  };
+  /** The set on Spotify that the Current Set is a copy of, to tell whether there is anything to update. */
+  const basedOnRecord = useQuery({
+    queryKey: ['dj', 'set', basedOn?.id ?? null],
+    queryFn: () => api<DjSetRecord>(`/api/dj/sets/${basedOn!.id}`),
+    enabled: basedOn != null,
+  });
+  const spotifyChanged =
+    built != null && basedOnRecord.data != null
+      ? contentKey(built.config, built.result) !== contentKey(normaliseDjConfig(basedOnRecord.data.config), basedOnRecord.data.result) ||
+        (setName ?? basedOnRecord.data.name) !== basedOnRecord.data.name
+      : true;
   const deleteSet = useMutation({
     mutationFn: (id: string) => api<void>(`/api/dj/sets/${id}`, { method: 'DELETE' }),
     onSuccess: (_v, id) => {
@@ -241,6 +264,7 @@ export function DjPage() {
     draftSavedKey.current = draft ? draftKey(c, result) : null;
     setFromDraft(draft ? { id: r.id, name: r.name } : null);
     setBasedOn(draft ? null : { id: r.id, name: r.name, url: r.spotifyUrl });
+    setSetName(r.name);
     setPendingOpen(null);
     setSetsOpen(false);
     view(null);
@@ -271,7 +295,7 @@ export function DjPage() {
           disabled={saveDraft.isPending}
           onClick={() =>
             saveDraft.mutate(
-              { name: aiName ?? suggestSetName(takenNames, new Date()), config: built.config, result: built.result },
+              { name: setName ?? suggestSetName(takenNames, new Date()), config: built.config, result: built.result },
               { onSuccess: () => openInBuilder(pendingOpen) },
             )
           }
@@ -338,8 +362,9 @@ export function DjPage() {
           onClick={() => {
             setSeed(randomSeed());
             view(null);
-            // A regenerated set is new, not a copy of the one on Spotify.
+            // A regenerated set is new, not a copy of the one on Spotify; a linked Draft keeps its name.
             setBasedOn(null);
+            if (!fromDraft) setSetName(null);
             live.rebuild();
           }}
           disabled={!live.loaded || live.pending}
@@ -359,6 +384,7 @@ export function DjPage() {
                   setConfirmClear(false);
                   setFromDraft(null);
                   setBasedOn(null);
+                  setSetName(null);
                   void live.clear();
                 }}
               >
@@ -472,28 +498,13 @@ export function DjPage() {
           ) : built ? (
             <>
               <ErrorNote error={live.error} />
-              {fromDraft && (
-                <p className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-zinc-300">
-                  Editing draft <span className="font-medium text-zinc-100">“{fromDraft.name}”</span> · changes are saved to it
-                  automatically
-                  {draftSave === 'saving' ? ' · saving…' : draftSave === 'error' ? ' · ' : ''}
-                  {draftSave === 'error' && <span className="text-red-300">could not save</span>}
-                </p>
-              )}
-              {basedOn && (
-                <p className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-zinc-300">
-                  A copy of <span className="font-medium text-zinc-100">“{basedOn.name}”</span>, which is on Spotify. Changes here do
-                  not change that playlist: save them as a new draft or create a new playlist.
-                  {basedOn.url && (
-                    <>
-                      {' '}
-                      <a href={basedOn.url} target="_blank" rel="noreferrer" className="text-brand hover:underline">
-                        Open in Spotify
-                      </a>
-                    </>
-                  )}
-                </p>
-              )}
+              <SetHeader
+                kind={fromDraft ? 'draft' : basedOn ? 'spotify' : 'new'}
+                name={setName}
+                onRename={renameCurrent}
+                spotifyUrl={basedOn?.url ?? null}
+                {...setStatus({ fromDraft: fromDraft != null, basedOn: basedOn != null, draftSave, spotifyChanged, updating: updatingSpotify, workspaceSave: live.saveState })}
+              />
               <ResultSummary result={built.result} />
               <CarryNote carried={built.carried} />
               <Card title="Energy and tempo">
@@ -539,7 +550,7 @@ export function DjPage() {
                   </>
                 }
               >
-                {aiFor('preview', undefined, { label: 'Use this name', doneFor: aiName, onClick: setAiName })}
+                {aiFor('preview', undefined, { label: 'Use this name', doneFor: setName, onClick: renameCurrent })}
                 <p className="mb-3 text-xs text-zinc-500">
                   A suggestion for each pair. Press Edit on a card to change it; your edits go with the playlist when you
                   create it. An edit stays through a rebuild as long as the same two tracks still follow each other.
@@ -555,7 +566,7 @@ export function DjPage() {
                 disabled={built.result.tracks.length === 0 || stale || live.pending}
                 busy={live.pending || stale}
                 suggestedName={
-                  aiName ? uniqueName(aiName, takenNames) : fromDraft ? uniqueName(fromDraft.name, takenNames) : suggestSetName(takenNames, new Date())
+                  setName ? uniqueName(setName, takenNames) : suggestSetName(takenNames, new Date())
                 }
                 onCreate={(name) => create.mutate({ req: { name, config: built.config, result: built.result } })}
                 running={creating && !createdDraftId}
@@ -564,7 +575,7 @@ export function DjPage() {
                 onSaveDraft={(name) => saveDraft.mutate({ name, config: built.config, result: built.result })}
                 savingDraft={saveDraft.isPending}
                 draftError={saveDraft.error ?? (fromDraft ? null : putDraft.error)}
-                spotifyTarget={basedOn ? { name: basedOn.name, url: basedOn.url } : null}
+                spotifyTarget={basedOn ? { name: basedOn.name, url: basedOn.url, newName: setName ?? basedOn.name, inSync: !spotifyChanged } : null}
                 onUpdateSpotify={(name) =>
                   basedOn && updateSpotify.mutate({ id: basedOn.id, body: { name, config: built.config, result: built.result } })
                 }
@@ -700,11 +711,18 @@ function ResultSummary({ result }: { result: DjSetResult }) {
         <span>Seed {result.seed}</span>
       </div>
       {result.warnings.length > 0 && (
-        <ul className="space-y-1 rounded bg-zinc-900 p-3 text-sm text-amber-300">
-          {result.warnings.map((w) => (
-            <li key={w}>⚠ {w}</li>
-          ))}
-        </ul>
+        <details className="group text-sm">
+          <summary className="w-fit cursor-pointer list-none rounded-full bg-zinc-900 px-3 py-1 text-xs text-amber-300 hover:bg-zinc-800">
+            ⚠ {result.warnings.length} note{result.warnings.length === 1 ? '' : 's'} about this set
+            <span className="ml-1 text-zinc-500 group-open:hidden">· show</span>
+            <span className="ml-1 hidden text-zinc-500 group-open:inline">· hide</span>
+          </summary>
+          <ul className="mt-2 space-y-1 rounded bg-zinc-900 p-3 text-amber-300">
+            {result.warnings.map((w) => (
+              <li key={w}>⚠ {w}</li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );
@@ -738,7 +756,7 @@ function CreatePanel({
   savingDraft: boolean;
   draftError: unknown;
   /** The Current Set is a copy of this set on Spotify, so it can update that playlist. */
-  spotifyTarget: { name: string; url: string | null } | null;
+  spotifyTarget: { name: string; url: string | null; newName: string; inSync: boolean } | null;
   onUpdateSpotify: (name: string) => void;
   updatingSpotify: boolean;
   updateError: unknown;
@@ -747,7 +765,7 @@ function CreatePanel({
   const [name, setName] = useState(suggestedName);
   const [asking, setAsking] = useState<'create' | 'draft' | 'update' | null>(null);
   const ask = (mode: 'create' | 'draft' | 'update') => {
-    setName(mode === 'update' && spotifyTarget ? spotifyTarget.name : suggestedName);
+    setName(mode === 'update' && spotifyTarget ? spotifyTarget.newName : suggestedName);
     setAsking(mode);
   };
   const working = running || savingDraft || updatingSpotify;
@@ -821,11 +839,15 @@ function CreatePanel({
           {spotifyTarget && (
             <Button
               variant="primary"
-              disabled={disabled || working}
+              disabled={disabled || working || spotifyTarget.inSync}
               onClick={() => ask('update')}
-              title="Replace the playlist's tracks on Spotify with this order, and store this sheet"
+              title={
+                spotifyTarget.inSync
+                  ? 'Nothing to update: the playlist on Spotify already has these tracks, this order and this sheet'
+                  : "Replace the playlist's tracks on Spotify with this order, and store this sheet"
+              }
             >
-              Update “{spotifyTarget.name}” on Spotify
+              {spotifyTarget.inSync ? 'Up to date on Spotify' : `Update “${spotifyTarget.name}” on Spotify`}
             </Button>
           )}
           <Button variant={spotifyTarget ? 'secondary' : 'primary'} disabled={disabled || working} onClick={() => ask('create')}>
@@ -950,3 +972,26 @@ function SavedSetView({
 
 /** Compares a set's content for the draft autosave. */
 const draftKey = (c: DjSetConfig, r: DjSetResult) => JSON.stringify([c, r.tracks.map((t) => t.id), r.transitions]);
+
+/** The set header's status line. */
+function setStatus(p: {
+  fromDraft: boolean;
+  basedOn: boolean;
+  draftSave: 'idle' | 'saving' | 'saved' | 'error';
+  spotifyChanged: boolean;
+  updating: boolean;
+  workspaceSave: string;
+}): { status: string; statusTone: 'muted' | 'good' | 'warn' | 'bad' } {
+  if (p.fromDraft) {
+    if (p.draftSave === 'saving') return { status: 'Saving…', statusTone: 'muted' };
+    if (p.draftSave === 'error') return { status: 'Not saved', statusTone: 'bad' };
+    return { status: 'Saved', statusTone: 'good' };
+  }
+  if (p.basedOn) {
+    if (p.updating) return { status: 'Updating Spotify…', statusTone: 'muted' };
+    return p.spotifyChanged
+      ? { status: 'Changed · not on Spotify yet', statusTone: 'warn' }
+      : { status: 'In sync with Spotify', statusTone: 'good' };
+  }
+  return { status: 'Not saved yet: save a draft or create it on Spotify', statusTone: 'muted' };
+}

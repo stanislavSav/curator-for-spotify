@@ -50,12 +50,10 @@ export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
  * the set as out of date (dirty). Sheet settings recompute the Transition Sheet
  * for the same tracks in the same order, keeping edits and AI values.
  */
-export function useLivePreview(
-  config: DjSetConfig,
-  seed: number,
-  fromDraft: DjWorkspace['fromDraft'],
-  onRestore: (w: DjWorkspace) => void,
-) {
+/** What the Current Set is linked to, and its name; saved with it. */
+export type SetMeta = Pick<DjWorkspace, 'fromDraft'> & { basedOn: NonNullable<DjWorkspace['basedOn']> | null; name: string | null };
+
+export function useLivePreview(config: DjSetConfig, seed: number, meta: SetMeta, onRestore: (w: DjWorkspace) => void) {
   const [built, setBuilt] = useState<Built | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [pending, setPending] = useState(true);
@@ -84,7 +82,11 @@ export function useLivePreview(
         const w = await api<DjWorkspace | null>('/api/dj/workspace', { signal: ctrl.signal });
         if (ctrl.signal.aborted) return;
         if (w) {
-          savedRef.current = workspaceKey(w.config, w.result, w.fromDraft);
+          savedRef.current = workspaceKey(w.config, w.result, {
+            fromDraft: w.fromDraft,
+            basedOn: w.basedOn ?? null,
+            name: w.name ?? null,
+          });
           setBuilt({ config: w.config, result: w.result, at: Date.parse(w.updatedAt), carried: { kept: 0, dropped: 0 } });
           setSaveState('saved');
           onRestoreRef.current(w);
@@ -167,14 +169,14 @@ export function useLivePreview(
   // Autosave the current set (tracks, sheet, edits, AI values, linked draft).
   useEffect(() => {
     if (!loaded || !built) return;
-    const key = workspaceKey(built.config, built.result, fromDraft);
+    const key = workspaceKey(built.config, built.result, meta);
     if (key === savedRef.current) return;
     setSaveState('saving');
     const timer = setTimeout(async () => {
       try {
         await api('/api/dj/workspace', {
           method: 'PUT',
-          json: { config: built.config, seed: built.result.seed, result: built.result, fromDraft },
+          json: { config: built.config, seed: built.result.seed, result: built.result, ...meta },
         });
         savedRef.current = key;
         setSaveState('saved');
@@ -183,7 +185,7 @@ export function useLivePreview(
       }
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [loaded, built, fromDraft]);
+  }, [loaded, built, meta.fromDraft, meta.basedOn, meta.name]);
 
   /** Applies an edit to the shown preview (page state only). */
   const edit = (f: (r: DjSetResult) => DjSetResult) => setBuilt((b) => (b ? { ...b, result: f(b.result) } : b));
@@ -216,7 +218,11 @@ export function useLivePreview(
   return { built, loaded, pending, sheetPending, error, edit, rebuild, load, clear, dirty, saveState };
 }
 
-const workspaceKey = (c: DjSetConfig, r: DjSetResult, d: DjWorkspace['fromDraft']) => JSON.stringify([c, r, d]);
+const workspaceKey = (c: DjSetConfig, r: DjSetResult, m: SetMeta) => JSON.stringify([c, r, m.fromDraft, m.basedOn, m.name]);
+
+/** A set's content for "has it changed?": settings, track order and the sheet values (not the Applied ticks). */
+export const contentKey = (c: DjSetConfig, r: DjSetResult) =>
+  JSON.stringify([c, r.tracks.map((t) => t.id), r.transitions.map((t) => t.settings)]);
 
 /** A created set, with optimistic PATCH for edits and Applied ticks. */
 export function useDjSet(id: string | null) {

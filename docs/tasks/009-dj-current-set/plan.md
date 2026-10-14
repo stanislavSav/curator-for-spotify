@@ -85,3 +85,30 @@ The owner noticed there was only "Create on Spotify": a set that was already on 
   - Route test with a fake Spotify: replace + rename calls, name and tracks stored, ticks kept on the unchanged pairs only; Drafts refused; unknown set 404.
   - In the demo (with a set marked "on Spotify" in the demo database only): opening it shows the Save to Spotify panel and the confirmation; the update is refused with the demo message.
   - Not run against the real Spotify account.
+
+## Follow-up: set header, name, in-sync Update, quieter warnings (2026-10-14)
+
+The owner reported:
+- "Use this name" did nothing.
+- It was not clear which saved set was open; the long copy note was too wordy.
+- The pool and key warnings should be hidden.
+- Update on Spotify should be active only when something changed.
+
+- **Set header** (`dj/SetHeader.tsx`) replaces the long notes. It is one line:
+  - a badge (New set / Draft / On Spotify);
+  - the **name** (click to rename; a linked Draft is renamed on the server at once);
+  - a short status: Saved / Saving… for a Draft; In sync with Spotify / Changed · not on Spotify yet / Updating Spotify… for a copy; "Not saved yet" for a new set;
+  - Open in Spotify.
+- **The Current Set's name** (`setName`) is the single source. It comes from the Draft or Spotify set, typing in the header, or "Use this name". It prefills Save draft, Create (made unique) and Update. It is saved with the Current Set, together with the link to the Spotify set (`dj_workspace.based_on_json`, `name`, added by migration), so a reload keeps both.
+  - Root cause of "Use this name does nothing": it only set a hidden value used when a form opened; a copy's Update form ignored it.
+- **Update on Spotify** compares the Current Set with the stored set (`contentKey`: config, track order, sheet values; Applied ticks ignored) and the name. With nothing to update, the button reads "Up to date on Spotify" and is disabled.
+- **Warnings** collapse into "⚠ N notes about this set · show".
+- **Checked in the demo:**
+  - Opened a set marked "on Spotify": the header showed "In sync with Spotify" and Update was disabled.
+  - Colour → Bold: "Changed · not on Spotify yet" and Update became active.
+  - AI pass → Use this name: the header name changed to the suggestion.
+  - Reload: the name, the link and the status stayed.
+
+## Parking lot
+
+- Full Backup exports `dj_workspace` without the new `based_on_json` and `name` columns. A restored Current Set loses its Spotify link and name, which is harmless.

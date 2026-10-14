@@ -475,8 +475,12 @@ export interface DjWorkspaceInput {
   config: DjSetConfig;
   seed: number;
   result: DjSetResult;
-  /** The Draft the builder was opened from, so "Update draft" stays offered. */
+  /** The Draft the builder is linked to; changes save to it. */
   fromDraft: { id: string; name: string } | null;
+  /** The set on Spotify this is a copy of, so "Update on Spotify" stays offered. */
+  basedOn?: { id: string; name: string; url: string | null } | null;
+  /** The Current Set's name (from a Draft, a set on Spotify, or "Use this name"). */
+  name?: string | null;
 }
 
 export interface DjWorkspace extends DjWorkspaceInput {

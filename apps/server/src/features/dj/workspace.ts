@@ -6,6 +6,8 @@ interface Row {
   seed: number;
   result_json: string;
   from_draft_json: string | null;
+  based_on_json: string | null;
+  name: string | null;
   updated_at: string;
 }
 
@@ -18,6 +20,8 @@ export function getWorkspace(db: DB): DjWorkspace | null {
     seed: r.seed,
     result: JSON.parse(r.result_json) as DjSetResult,
     fromDraft: r.from_draft_json ? (JSON.parse(r.from_draft_json) as DjWorkspace['fromDraft']) : null,
+    basedOn: r.based_on_json ? (JSON.parse(r.based_on_json) as DjWorkspace['basedOn']) : null,
+    name: r.name,
     updatedAt: r.updated_at,
   };
 }
@@ -25,10 +29,20 @@ export function getWorkspace(db: DB): DjWorkspace | null {
 export function saveWorkspace(db: DB, w: DjWorkspaceInput): DjWorkspace {
   const updatedAt = nowIso();
   db.prepare(
-    `INSERT INTO dj_workspace (id, config_json, seed, result_json, from_draft_json, updated_at) VALUES (1, ?, ?, ?, ?, ?)
+    `INSERT INTO dj_workspace (id, config_json, seed, result_json, from_draft_json, based_on_json, name, updated_at)
+     VALUES (1, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (id) DO UPDATE SET config_json = excluded.config_json, seed = excluded.seed,
-       result_json = excluded.result_json, from_draft_json = excluded.from_draft_json, updated_at = excluded.updated_at`,
-  ).run(JSON.stringify(w.config), w.seed, JSON.stringify(w.result), w.fromDraft ? JSON.stringify(w.fromDraft) : null, updatedAt);
+       result_json = excluded.result_json, from_draft_json = excluded.from_draft_json,
+       based_on_json = excluded.based_on_json, name = excluded.name, updated_at = excluded.updated_at`,
+  ).run(
+    JSON.stringify(w.config),
+    w.seed,
+    JSON.stringify(w.result),
+    w.fromDraft ? JSON.stringify(w.fromDraft) : null,
+    w.basedOn ? JSON.stringify(w.basedOn) : null,
+    w.name ?? null,
+    updatedAt,
+  );
   return { ...w, updatedAt };
 }
 

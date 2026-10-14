@@ -173,6 +173,8 @@ export const djWorkspaceSchema = z.object({
   seed: z.number().int().min(0).max(2 ** 32 - 1),
   result: djSetResultSchema,
   fromDraft: z.object({ id: z.string().min(1).max(64), name: z.string().max(100) }).nullable(),
+  basedOn: z.object({ id: z.string().min(1).max(64), name: z.string().max(100), url: z.string().nullable() }).nullable().optional(),
+  name: z.string().max(100).nullable().optional(),
 }) satisfies z.ZodType<DjWorkspaceInput>;
 
 export const djSpotifyUpdateSchema = z.object({

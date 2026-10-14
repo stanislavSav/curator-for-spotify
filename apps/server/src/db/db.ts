@@ -185,6 +185,8 @@ CREATE TABLE IF NOT EXISTS dj_workspace (
   seed INTEGER NOT NULL,
   result_json TEXT NOT NULL,
   from_draft_json TEXT,
+  based_on_json TEXT,                   -- the set on Spotify this is a copy of
+  name TEXT,                            -- the Current Set's name, if it has one yet
   updated_at TEXT NOT NULL
 );
 
@@ -226,6 +228,8 @@ export function openDb(file = resolve(DATA_DIR, 'curator.sqlite')): DB {
 const ADDED_COLUMNS: { table: string; column: string; ddl: string }[] = [
   { table: 'dj_sets', column: 'status', ddl: "TEXT NOT NULL DEFAULT 'created'" },
   { table: 'dj_sets', column: 'updated_at', ddl: 'TEXT' },
+  { table: 'dj_workspace', column: 'based_on_json', ddl: 'TEXT' },
+  { table: 'dj_workspace', column: 'name', ddl: 'TEXT' },
 ];
 
 function migrate(db: DB) {
