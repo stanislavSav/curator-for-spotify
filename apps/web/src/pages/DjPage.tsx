@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   normaliseDjConfig,
@@ -60,7 +60,7 @@ export function DjPage() {
 
   const options = useQuery({ queryKey: ['dj', 'pool-options'], queryFn: () => api<DjPoolOptions>('/api/dj/pool-options') });
   const history = useQuery({ queryKey: ['dj', 'sets'], queryFn: () => api<DjSetSummary[]>('/api/dj/sets') });
-  /** The builder's set came from this draft ("Use these settings"), so it can update it. */
+  /** The Current Set is this draft (opened from Earlier sets or saved from the builder); changes save to it. */
   const [fromDraft, setFromDraft] = useState<{ id: string; name: string } | null>(null);
   // The current set is restored from the server, with its seed and linked draft.
   const live = useLivePreview(config, seed, fromDraft, (w) => {
@@ -85,6 +85,13 @@ export function DjPage() {
     live.edit((res) => mergeAiResult(res, r, target.keys));
     return changed;
   });
+  /** The Current Set is a copy of this set on Spotify (opened from Earlier sets). */
+  const [basedOn, setBasedOn] = useState<{ id: string; name: string; url: string | null } | null>(null);
+  /** A saved set waiting to be opened, while the user decides about the unsaved Current Set. */
+  const [pendingOpen, setPendingOpen] = useState<DjSetRecord | null>(null);
+  /** What the linked draft already holds, so opening it does not save it again. */
+  const draftSavedKey = useRef<string | null>(null);
+  const [draftSave, setDraftSave] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   /** A name taken from the AI pass for the next Save draft / Create on Spotify of the Current Set. */
   const [aiName, setAiName] = useState<string | null>(null);
   // A new set (Generate, Regenerate, Clear) needs a new name.
@@ -143,9 +150,11 @@ export function DjPage() {
     mutationFn: (req: DjDraftRequest) => api<DjSetRecord>('/api/dj/drafts', { method: 'POST', json: req }),
     onSuccess: (r) => {
       showRecord(r);
+      // The builder stays on the set, now linked to the draft: later changes save to it.
+      draftSavedKey.current = draftKey(r.config, r.result);
       setFromDraft({ id: r.id, name: r.name });
+      setBasedOn(null);
       setJustSaved(r.id);
-      view(r.id);
     },
   });
   const putDraft = useMutation({
@@ -166,6 +175,28 @@ export function DjPage() {
   });
   const takenNames = history.data?.map((s) => s.name) ?? [];
 
+  // A Current Set linked to a Draft saves its changes back to that Draft.
+  useEffect(() => {
+    if (!fromDraft || !built || live.pending) return;
+    const key = draftKey(built.config, built.result);
+    if (key === draftSavedKey.current) return;
+    setDraftSave('saving');
+    const id = fromDraft.id;
+    const timer = setTimeout(() => {
+      putDraft.mutate(
+        { id, body: { config: built.config, result: built.result } },
+        {
+          onSuccess: () => {
+            draftSavedKey.current = key;
+            setDraftSave('saved');
+          },
+          onError: () => setDraftSave('error'),
+        },
+      );
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [fromDraft?.id, built, live.pending]);
+
   // While the sheet is being recomputed, the shown values may be about to change.
   const stale = live.sheetPending;
   /** Explicit track actions (remove, start, bring back) rebuild at once. */
@@ -175,13 +206,37 @@ export function DjPage() {
   };
   const record = viewingId ? saved.record : undefined;
 
-  /** "Use these settings": a saved set's settings and seed, and its edits on pairs that remain. */
-  const takeSettingsOf = (r: DjSetRecord) => {
-    setFromDraft(isDraft(r) ? { id: r.id, name: r.name } : null);
+  /**
+   * Opens a saved set in the builder exactly as it was saved (no rebuild). A
+   * Draft stays linked, so changes save back to it; a set on Spotify opens as a
+   * copy, because its playlist does not change from here.
+   */
+  const openInBuilder = (r: DjSetRecord) => {
+    const c = normaliseDjConfig(r.config);
+    const draft = isDraft(r);
+    const result = draft ? r.result : { ...r.result, transitions: r.result.transitions.map((t) => ({ ...t, applied: false })) };
+    setConfigState(c);
+    saveConfig(c);
     setSeed(r.result.seed);
-    setConfig(normaliseDjConfig(r.config));
-    live.rebuild(r.result);
+    live.load(c, result);
+    draftSavedKey.current = draft ? draftKey(c, result) : null;
+    setFromDraft(draft ? { id: r.id, name: r.name } : null);
+    setBasedOn(draft ? null : { id: r.id, name: r.name, url: r.spotifyUrl });
+    setPendingOpen(null);
+    view(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  /** Opening another set replaces the Current Set; ask first when it is not saved anywhere. */
+  const requestOpen = async (id: string) => {
+    const r = await qc.fetchQuery({ queryKey: ['dj', 'set', id], queryFn: () => api<DjSetRecord>(`/api/dj/sets/${id}`) });
+    if (fromDraft?.id === r.id && built) {
+      view(null);
+      return;
+    }
+    if (built && !fromDraft) setPendingOpen(r);
+    else openInBuilder(r);
+  };
+  const takeSettingsOf = (r: DjSetRecord) => void requestOpen(r.id);
 
   const footer = (
     <div className="space-y-2">
@@ -233,6 +288,8 @@ export function DjPage() {
           onClick={() => {
             setSeed(randomSeed());
             view(null);
+            // A regenerated set is new, not a copy of the one on Spotify.
+            setBasedOn(null);
             live.rebuild();
           }}
           disabled={!live.loaded || live.pending}
@@ -251,6 +308,7 @@ export function DjPage() {
                 onClick={() => {
                   setConfirmClear(false);
                   setFromDraft(null);
+                  setBasedOn(null);
                   void live.clear();
                 }}
               >
@@ -303,6 +361,31 @@ export function DjPage() {
         </aside>
 
         <div className="min-w-0 space-y-6">
+          {pendingOpen && built && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-800/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+              <span className="min-w-0 flex-1">
+                Your current set is not saved as a draft. Opening “{pendingOpen.name}” replaces it.
+              </span>
+              <Button
+                variant="primary"
+                disabled={saveDraft.isPending}
+                onClick={() =>
+                  saveDraft.mutate(
+                    { name: aiName ?? suggestSetName(takenNames, new Date()), config: built.config, result: built.result },
+                    { onSuccess: () => openInBuilder(pendingOpen) },
+                  )
+                }
+              >
+                {saveDraft.isPending ? 'Saving…' : 'Save it as a draft, then open'}
+              </Button>
+              <Button variant="danger" onClick={() => openInBuilder(pendingOpen)}>
+                Replace it
+              </Button>
+              <Button variant="ghost" onClick={() => setPendingOpen(null)}>
+                Cancel
+              </Button>
+            </div>
+          )}
           {viewingId ? (
             record ? (
               <SavedSetView
@@ -355,6 +438,28 @@ export function DjPage() {
           ) : built ? (
             <>
               <ErrorNote error={live.error} />
+              {fromDraft && (
+                <p className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-zinc-300">
+                  Editing draft <span className="font-medium text-zinc-100">“{fromDraft.name}”</span> · changes are saved to it
+                  automatically
+                  {draftSave === 'saving' ? ' · saving…' : draftSave === 'error' ? ' · ' : ''}
+                  {draftSave === 'error' && <span className="text-red-300">could not save</span>}
+                </p>
+              )}
+              {basedOn && (
+                <p className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-zinc-300">
+                  A copy of <span className="font-medium text-zinc-100">“{basedOn.name}”</span>, which is on Spotify. Changes here do
+                  not change that playlist: save them as a new draft or create a new playlist.
+                  {basedOn.url && (
+                    <>
+                      {' '}
+                      <a href={basedOn.url} target="_blank" rel="noreferrer" className="text-brand hover:underline">
+                        Open in Spotify
+                      </a>
+                    </>
+                  )}
+                </p>
+              )}
               <ResultSummary result={built.result} />
               <CarryNote carried={built.carried} />
               <Card title="Energy and tempo">
@@ -477,6 +582,8 @@ export function DjPage() {
             sets={history.data}
             error={history.error}
             viewingId={viewingId}
+            openId={viewingId ? null : (fromDraft?.id ?? basedOn?.id ?? null)}
+            onOpen={(id) => void requestOpen(id)}
             onView={view}
             onDelete={(id) => deleteSet.mutateAsync(id)}
           />
@@ -695,8 +802,8 @@ function SavedSetView({
           title={record.name}
           actions={
             <>
-              <Button variant="ghost" onClick={onUseSettings} title="Copy this set's settings into the panel on the left">
-                Use these settings
+              <Button variant="ghost" onClick={onUseSettings} title="Open a copy of this set in the builder, exactly as saved, to change it">
+                Open in builder
               </Button>
               <Button onClick={onClose}>Back to builder</Button>
             </>
@@ -756,3 +863,6 @@ function SavedSetView({
     </>
   );
 }
+
+/** Compares a set's content for the draft autosave. */
+const draftKey = (c: DjSetConfig, r: DjSetResult) => JSON.stringify([c, r.tracks.map((t) => t.id), r.transitions]);

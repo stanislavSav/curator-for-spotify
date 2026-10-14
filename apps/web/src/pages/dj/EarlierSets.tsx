@@ -8,12 +8,17 @@ type Props = {
   sets: DjSetSummary[] | undefined;
   error: unknown;
   viewingId: string | null;
+  /** The set shown in the builder right now (a linked draft or a copy). */
+  openId: string | null;
+  /** Opens a set in the builder, exactly as saved, to keep working on it. */
+  onOpen: (id: string) => void;
+  /** Opens the apply view of a set on Spotify (ticks for transitions set in Spotify). */
   onView: (id: string) => void;
   onDelete: (id: string) => Promise<unknown>;
 };
 
 /** Saved DJ Sets: drafts and sets created on Spotify. */
-export function EarlierSets({ sets, error, viewingId, onView, onDelete }: Props) {
+export function EarlierSets({ sets, error, viewingId, openId, onOpen, onView, onDelete }: Props) {
   const [filter, setFilter] = useState<SetFilter>('all');
   const [confirming, setConfirming] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -64,12 +69,28 @@ export function EarlierSets({ sets, error, viewingId, onView, onDelete }: Props)
             const pairs = Math.max(0, s.tracks - 1);
             const applied = s.applied ?? 0;
             return (
-              <li key={s.id} className="py-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+              <li key={s.id} className="py-1">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  title={draft ? 'Open this draft and keep working on it' : 'Open a copy of this set to change it'}
+                  onClick={() => onOpen(s.id)}
+                  onKeyDown={(e) => {
+                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      onOpen(s.id);
+                    }
+                  }}
+                  className={cx(
+                    '-mx-2 flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-zinc-800/60',
+                    openId === s.id && 'bg-zinc-800/80 ring-1 ring-zinc-600',
+                  )}
+                >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-medium">{s.name}</span>
                       {draft ? <Badge tone="warn">Draft</Badge> : <Badge tone="good">On Spotify</Badge>}
+                      {openId === s.id && <Badge tone="info">Open in builder</Badge>}
                     </div>
                     <div className="text-xs text-zinc-500">
                       {draft ? `Updated ${isoDay(s.updatedAt ?? s.createdAt)}` : isoDay(s.createdAt)} · {s.tracks} tracks · {fmtDuration(s.durationMs)} · score{' '}
@@ -84,15 +105,21 @@ export function EarlierSets({ sets, error, viewingId, onView, onDelete }: Props)
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     {s.spotifyUrl && (
-                      <a href={s.spotifyUrl} target="_blank" rel="noreferrer" className="rounded-full px-3 py-1 text-sm text-brand hover:bg-zinc-800">
+                      <a href={s.spotifyUrl} target="_blank" rel="noreferrer" className="rounded-full px-3 py-1 text-sm text-brand hover:bg-zinc-700">
                         Open in Spotify
                       </a>
                     )}
-                    <Button variant={viewingId === s.id ? 'secondary' : 'ghost'} onClick={() => onView(s.id)}>
-                      {draft ? 'Open draft' : applied < pairs ? 'Continue applying' : 'View sheet'}
-                    </Button>
+                    {!draft && (
+                      <Button
+                        variant={viewingId === s.id ? 'secondary' : 'ghost'}
+                        onClick={() => onView(s.id)}
+                        title="Step through the transitions and tick each one once it is set in Spotify"
+                      >
+                        Apply in Spotify {applied}/{pairs}
+                      </Button>
+                    )}
                     <button
                       onClick={() => setConfirming(confirming === s.id ? null : s.id)}
                       className="rounded-full px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-800 hover:text-red-300"

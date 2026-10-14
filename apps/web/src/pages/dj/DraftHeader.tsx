@@ -51,8 +51,8 @@ export function DraftHeader({ record, justSaved, onCreate, creating, createError
       }
       actions={
         <>
-          <Button variant="ghost" onClick={onUseSettings} title="Copy this draft's settings into the panel on the left and rebuild. Your edits stay on pairs that remain.">
-            Use these settings
+          <Button variant="ghost" onClick={onUseSettings} title="Open this draft in the builder, exactly as saved; changes are saved to it">
+            Open in builder
           </Button>
           <Button onClick={onClose}>Back to builder</Button>
         </>

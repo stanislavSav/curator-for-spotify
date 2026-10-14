@@ -195,6 +195,13 @@ export function useLivePreview(
     if (carryFrom) carryFromRef.current = carryFrom;
     setBuildNo((n) => n + 1);
   };
+  /** Shows a saved set exactly as it was saved: no rebuild, same tracks, sheet, edits and AI values. */
+  const load = (c: DjSetConfig, result: DjSetResult) => {
+    carryFromRef.current = null;
+    setBuilt({ config: c, result, at: Date.now(), carried: { kept: 0, dropped: 0 } });
+    setError(null);
+    setPending(false);
+  };
   /** Drops the current tracklist and Transition Sheet (settings and drafts stay). */
   const clear = async () => {
     await api('/api/dj/workspace', { method: 'DELETE' });
@@ -206,7 +213,7 @@ export function useLivePreview(
   /** The shown set was built from other set settings than the current ones. */
   const dirty = built != null && !pending && shapeOf(built.config) !== shapeOf(config);
 
-  return { built, loaded, pending, sheetPending, error, edit, rebuild, clear, dirty, saveState };
+  return { built, loaded, pending, sheetPending, error, edit, rebuild, load, clear, dirty, saveState };
 }
 
 const workspaceKey = (c: DjSetConfig, r: DjSetResult, d: DjWorkspace['fromDraft']) => JSON.stringify([c, r, d]);

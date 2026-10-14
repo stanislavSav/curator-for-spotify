@@ -40,3 +40,18 @@ The DJ page kept its set only in React state. Leaving the page unmounted it. Com
 ## Follow-up: `npm run demo` left its server running after a normal stop
 
 Stopping the demo with SIGTERM (e.g. `pkill`) ended npm and Vite but not the server, because `tsx watch` ignores SIGTERM and restarts the server on the next file change. `scripts/demo.mjs` now sends SIGTERM to each child's process group, then SIGKILL after 600 ms. Verified: no process remains on the demo ports after a stop.
+
+## Follow-up: open earlier sets to keep working on them (2026-10-14)
+
+The owner found it uncomfortable that earlier sets could not simply be opened and changed, and that "Continue applying" did not fit.
+
+- **The whole row is clickable** (Enter or Space as well) and opens the set in the builder **exactly as saved**: same tracks, sheet, edits and AI values, with no rebuild (`useLivePreview.load`).
+  - **Draft:** it becomes the Current Set and stays linked. Every change is saved back to the draft automatically (debounced PUT). The note above the set reads "Editing draft “…” · changes are saved to it automatically".
+  - **Set on Spotify:** it opens as a copy, with Applied ticks reset. A note says the Spotify playlist does not change; save the copy as a new draft or create a new playlist.
+  - The open row is marked "Open in builder".
+- **Unsaved Current Set:** opening another set asks first, with "Save it as a draft, then open" / "Replace it" / "Cancel". A Current Set linked to a draft is already saved, so the question is skipped.
+- **Save draft now stays in the builder,** linked to the new draft, instead of switching to a read-only view.
+- **"Continue applying" / "Open draft" become "Apply in Spotify n/m"** (sets on Spotify only). "Use these settings" becomes "Open in builder".
+- **Checked in the demo:**
+  - Unsaved set → click "Draft A" → confirmation → Replace it → the draft opened with its own first track and the "Editing draft" note.
+  - Colour → Bold was saved to the draft on the server (`updatedAt` set, colour bold, same tracks).
