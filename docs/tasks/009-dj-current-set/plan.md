@@ -55,3 +55,14 @@ The owner found it uncomfortable that earlier sets could not simply be opened an
 - **Checked in the demo:**
   - Unsaved set → click "Draft A" → confirmation → Replace it → the draft opened with its own first track and the "Editing draft" note.
   - Colour → Bold was saved to the draft on the server (`updatedAt` set, colour bold, same tracks).
+
+## Follow-up: Saved sets in a drawer (2026-10-14)
+
+The owner found the layout awkward: Earlier sets sat at the bottom of the page, while the question and the opened set appeared at the top.
+
+- **The bottom card is gone.** A **Saved sets** button with a count in the DJ page header opens a slide-over drawer from the right (`dj/SetsDrawer.tsx`, a generic `Drawer`). It holds the filter (All / Drafts / On Spotify) and the list. Esc, ✕ or a click on the backdrop closes it, and the page behind does not scroll.
+- **The "replace your current set?" question** shows inside the drawer, right under the clicked row (`EarlierSets.afterRow`). Its text sits above its buttons. When the question comes from elsewhere (e.g. "Open in builder" on a saved set's view), it shows at the top as before.
+- **Opening a set or choosing Apply in Spotify closes the drawer.** The open set is marked "Open in builder".
+- **Checked in the demo:**
+  - Unsaved set → Saved sets → click "Sunday Deep Drift" → the question appears under it → Replace it → the drawer closes and the draft opens exactly (same first track, "Editing draft" note).
+  - Reopening the drawer shows the "Open in builder" badge; Esc closes it.

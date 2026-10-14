@@ -22,6 +22,7 @@ import { ApplyMode } from './dj/ApplyMode.tsx';
 import { ConfigPanel } from './dj/ConfigPanel.tsx';
 import { DraftHeader } from './dj/DraftHeader.tsx';
 import { EarlierSets } from './dj/EarlierSets.tsx';
+import { Drawer } from './dj/SetsDrawer.tsx';
 import { appliedCount, editResult } from './dj/edits.ts';
 import { useAiPass, useDjSet, useLivePreview, useNow, type AiTarget } from './dj/hooks.ts';
 import { SetChart } from './dj/SetChart.tsx';
@@ -87,6 +88,8 @@ export function DjPage() {
   });
   /** The Current Set is a copy of this set on Spotify (opened from Earlier sets). */
   const [basedOn, setBasedOn] = useState<{ id: string; name: string; url: string | null } | null>(null);
+  /** The Saved sets drawer (drafts and sets on Spotify). */
+  const [setsOpen, setSetsOpen] = useState(false);
   /** A saved set waiting to be opened, while the user decides about the unsaved Current Set. */
   const [pendingOpen, setPendingOpen] = useState<DjSetRecord | null>(null);
   /** What the linked draft already holds, so opening it does not save it again. */
@@ -223,6 +226,7 @@ export function DjPage() {
     setFromDraft(draft ? { id: r.id, name: r.name } : null);
     setBasedOn(draft ? null : { id: r.id, name: r.name, url: r.spotifyUrl });
     setPendingOpen(null);
+    setSetsOpen(false);
     view(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -237,6 +241,36 @@ export function DjPage() {
     else openInBuilder(r);
   };
   const takeSettingsOf = (r: DjSetRecord) => void requestOpen(r.id);
+
+  /** "Your current set is not saved…" — shown in the drawer under the clicked set, or on top when opened elsewhere. */
+  const replaceConfirm =
+    pendingOpen && built ? (
+      <div className="space-y-2 rounded-xl border border-amber-800/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+        <p>
+          Your current set is not saved as a draft. Opening “{pendingOpen.name}” replaces it.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="primary"
+          disabled={saveDraft.isPending}
+          onClick={() =>
+            saveDraft.mutate(
+              { name: aiName ?? suggestSetName(takenNames, new Date()), config: built.config, result: built.result },
+              { onSuccess: () => openInBuilder(pendingOpen) },
+            )
+          }
+        >
+          {saveDraft.isPending ? 'Saving…' : 'Save it as a draft, then open'}
+        </Button>
+        <Button variant="danger" onClick={() => openInBuilder(pendingOpen)}>
+          Replace it
+        </Button>
+        <Button variant="ghost" onClick={() => setPendingOpen(null)}>
+          Cancel
+        </Button>
+        </div>
+      </div>
+    ) : null;
 
   const footer = (
     <div className="space-y-2">
@@ -335,7 +369,15 @@ export function DjPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">DJ Set</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">DJ Set</h1>
+          <Button onClick={() => setSetsOpen(true)} title="Drafts and sets created on Spotify: open one to keep working on it">
+            Saved sets
+            {(history.data?.length ?? 0) > 0 && (
+              <span className="rounded-full bg-zinc-700 px-1.5 text-xs tabular-nums text-zinc-200">{history.data!.length}</span>
+            )}
+          </Button>
+        </div>
         <p className="mt-1 max-w-3xl text-sm text-zinc-400">
           Build a playlist ordered for smooth transitions by BPM, Camelot key and an Energy Curve. Choose a Pool on the
           left and press Rebuild set after a change; Sheet Style and Colour update the sheet at once. Check the Transition Sheet, create the playlist on Spotify
@@ -361,31 +403,7 @@ export function DjPage() {
         </aside>
 
         <div className="min-w-0 space-y-6">
-          {pendingOpen && built && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-800/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
-              <span className="min-w-0 flex-1">
-                Your current set is not saved as a draft. Opening “{pendingOpen.name}” replaces it.
-              </span>
-              <Button
-                variant="primary"
-                disabled={saveDraft.isPending}
-                onClick={() =>
-                  saveDraft.mutate(
-                    { name: aiName ?? suggestSetName(takenNames, new Date()), config: built.config, result: built.result },
-                    { onSuccess: () => openInBuilder(pendingOpen) },
-                  )
-                }
-              >
-                {saveDraft.isPending ? 'Saving…' : 'Save it as a draft, then open'}
-              </Button>
-              <Button variant="danger" onClick={() => openInBuilder(pendingOpen)}>
-                Replace it
-              </Button>
-              <Button variant="ghost" onClick={() => setPendingOpen(null)}>
-                Cancel
-              </Button>
-            </div>
-          )}
+          {pendingOpen && built && !setsOpen && replaceConfirm}
           {viewingId ? (
             record ? (
               <SavedSetView
@@ -578,15 +596,28 @@ export function DjPage() {
             />
           )}
 
-          <EarlierSets
-            sets={history.data}
-            error={history.error}
-            viewingId={viewingId}
-            openId={viewingId ? null : (fromDraft?.id ?? basedOn?.id ?? null)}
-            onOpen={(id) => void requestOpen(id)}
-            onView={view}
-            onDelete={(id) => deleteSet.mutateAsync(id)}
-          />
+          <Drawer
+            open={setsOpen}
+            onClose={() => {
+              setSetsOpen(false);
+              setPendingOpen(null);
+            }}
+            title="Saved sets"
+          >
+            <EarlierSets
+              sets={history.data}
+              error={history.error}
+              viewingId={viewingId}
+              openId={viewingId ? null : (fromDraft?.id ?? basedOn?.id ?? null)}
+              onOpen={(id) => void requestOpen(id)}
+              onView={(id) => {
+                setSetsOpen(false);
+                view(id);
+              }}
+              onDelete={(id) => deleteSet.mutateAsync(id)}
+              afterRow={(id) => (pendingOpen?.id === id ? <div className="mt-2">{replaceConfirm}</div> : null)}
+            />
+          </Drawer>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { DjSetSummary } from '@curator/shared';
-import { Badge, Button, Card, cx, ErrorNote } from '../../components/ui.tsx';
+import { Badge, Button, cx, ErrorNote } from '../../components/ui.tsx';
 import { countSets, filterSets, isDraft, isoDay, SET_FILTERS, type SetFilter } from './saved.ts';
 import { fmtDuration } from './sheet.ts';
 
@@ -15,10 +15,12 @@ type Props = {
   /** Opens the apply view of a set on Spotify (ticks for transitions set in Spotify). */
   onView: (id: string) => void;
   onDelete: (id: string) => Promise<unknown>;
+  /** Extra content under a row, e.g. the "replace your current set?" question for the set just clicked. */
+  afterRow?: (id: string) => ReactNode;
 };
 
 /** Saved DJ Sets: drafts and sets created on Spotify. */
-export function EarlierSets({ sets, error, viewingId, openId, onOpen, onView, onDelete }: Props) {
+export function EarlierSets({ sets, error, viewingId, openId, onOpen, onView, onDelete, afterRow }: Props) {
   const [filter, setFilter] = useState<SetFilter>('all');
   const [confirming, setConfirming] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -41,11 +43,9 @@ export function EarlierSets({ sets, error, viewingId, openId, onOpen, onView, on
   };
 
   return (
-    <Card
-      title="Earlier sets"
-      actions={
-        all.length > 0 && (
-          <div role="group" aria-label="Show" className="flex rounded-full bg-zinc-800 p-0.5 text-xs">
+    <div className="space-y-3">
+      {all.length > 0 && (
+          <div role="group" aria-label="Show" className="flex w-fit rounded-full bg-zinc-800 p-0.5 text-xs">
             {SET_FILTERS.map((f) => (
               <button
                 key={f.value}
@@ -57,9 +57,7 @@ export function EarlierSets({ sets, error, viewingId, openId, onOpen, onView, on
               </button>
             ))}
           </div>
-        )
-      }
-    >
+      )}
       <ErrorNote error={error} />
       <ErrorNote error={deleteError} />
       {shown.length > 0 ? (
@@ -144,6 +142,7 @@ export function EarlierSets({ sets, error, viewingId, openId, onOpen, onView, on
                     </Button>
                   </div>
                 )}
+                {afterRow?.(s.id)}
               </li>
             );
           })}
@@ -157,6 +156,6 @@ export function EarlierSets({ sets, error, viewingId, openId, onOpen, onView, on
               : 'Sets you save as a draft or create on Spotify appear here with their Transition Sheet.'}
         </p>
       )}
-    </Card>
+    </div>
   );
 }
