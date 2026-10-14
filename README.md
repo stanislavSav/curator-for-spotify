@@ -17,7 +17,7 @@ Everything runs on your machine. Your library stays in a local SQLite file.
 | 1 | **Analyse** | Syncs Liked Songs, your own playlists, top tracks/artists and recent plays. Adds BPM, key and energy from [ReccoBeats](https://reccobeats.com) and [Deezer](https://developers.deezer.com), and genre tags from [MusicBrainz](https://musicbrainz.org) and [Wikidata](https://www.wikidata.org). |
 | 2 | **Propose** | Your AI agent reads a compact Snapshot of your library and writes named playlist proposals with reasons. No agent? Press **Generate basic proposals**. You approve, edit or drop each one; the app creates the approved ones on Spotify. |
 | 3 | **Prune** | Finds playlists with no recent use, based on your Streaming History export, plays of tracks that only that playlist has, and edit dates. You confirm each one. A backup is saved first and can be restored from the app; Spotify also keeps deleted playlists recoverable for 90 days. |
-| 4 | **DJ Set** | Picks tracks from a pool and orders them by BPM, Camelot key and an energy curve you choose, then creates the playlist. A per-pair **Transition Sheet** suggests the Mix style (Fade, Rise…) and bar length to set in Spotify. |
+| 4 | **DJ Set** | Picks tracks from a pool and orders them by BPM, Camelot key and an energy curve you choose, then creates the playlist. The set rebuilds live as you change settings. A **Transition Sheet** card per pair mirrors Spotify's *Edit transition* panel: preset, bars, and the exact Volume / EQ / Filter / Effects / Looping values to pick. You can edit each card, tick it off as applied, and step through them in a full-screen Apply mode. |
 
 ## Before you start
 
@@ -26,7 +26,7 @@ Everything runs on your machine. Your library stays in a local SQLite file.
 > - **You create your own Spotify app** (about 5 minutes, free) at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard). Development Mode allows at most 5 users per app, so each person runs the tool with their own app.
 > - **Node.js 22.12 or newer**, and macOS, Linux or Windows.
 > - **Spotify no longer gives apps audio features** (BPM, key, energy) or **genres**. This tool gets them from third-party services instead, so some tracks will have gaps.
-> - **Spotify Mix transitions have no API.** The app sets the track order and gives you a Transition Sheet. You apply the transitions yourself in the Spotify app (Mix › Edit).
+> - **Spotify Mix transitions have no API.** The app sets the track order and gives you a Transition Sheet with the exact values to set. You apply them yourself in the Spotify app (Mix › Edit transition).
 > - **Optional, but best for Prune:** request your *Extended streaming history* at [spotify.com/account/privacy](https://www.spotify.com/account/privacy/). It can take up to 30 days to arrive.
 
 ## Try it in one minute (demo)

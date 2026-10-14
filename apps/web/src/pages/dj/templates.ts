@@ -1,7 +1,7 @@
-import { DEFAULT_DJ_CONFIG, type DjSetConfig } from '@curator/shared';
+import { DEFAULT_DJ_CONFIG, normaliseDjConfig, type DjSetConfig } from '@curator/shared';
 
-/** Set-shape presets. They keep the Pool, locks and exclusions the user chose. */
-export const DJ_PRESETS: { id: string; label: string; about: string; apply: (c: DjSetConfig) => DjSetConfig }[] = [
+/** Set Templates change the set shape. They keep the Pool, locks and exclusions the user chose. */
+export const SET_TEMPLATES: { id: string; label: string; about: string; apply: (c: DjSetConfig) => DjSetConfig }[] = [
   {
     id: 'friday',
     label: 'Friday warm-up',
@@ -15,7 +15,7 @@ export const DJ_PRESETS: { id: string; label: string; about: string; apply: (c: 
       allowHalfDouble: true,
       keyStrictness: 'relaxed',
       artistSpacing: 4,
-      transitions: { ...c.transitions, defaultBars: 16, styles: { Fade: true, Rise: true, Blend: true } },
+      transitions: { ...c.transitions, sheetStyle: 'smooth', defaultBars: 16 },
     }),
   },
   {
@@ -31,13 +31,13 @@ export const DJ_PRESETS: { id: string; label: string; about: string; apply: (c: 
       allowHalfDouble: true,
       keyStrictness: 'relaxed',
       artistSpacing: 3,
-      transitions: { ...c.transitions, defaultBars: 8 },
+      transitions: { ...c.transitions, sheetStyle: 'balanced', defaultBars: 8 },
     }),
   },
   {
     id: 'dinner',
     label: 'Chill dinner',
-    about: '2 hours, low energy, strict keys and slow Fades. No Rise.',
+    about: '2 hours, low energy, strict keys and long, soft washes.',
     apply: (c) => ({
       ...c,
       length: { mode: 'minutes', minutes: 120 },
@@ -47,27 +47,20 @@ export const DJ_PRESETS: { id: string; label: string; about: string; apply: (c: 
       allowHalfDouble: false,
       keyStrictness: 'strict',
       artistSpacing: 5,
-      transitions: { ...c.transitions, defaultBars: 16, styles: { Fade: true, Rise: false, Blend: true } },
+      transitions: { ...c.transitions, sheetStyle: 'ambient', defaultBars: 16 },
     }),
   },
 ];
 
 const STORAGE_KEY = 'dj-config-v1';
 
-/** Restores the last config. Falls back to defaults when storage is empty or broken. */
+/** Restores the last config. Falls back to defaults when storage is empty, blocked or holds an old shape. */
 export function loadConfig(): DjSetConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw) as Partial<DjSetConfig>;
-      return {
-        ...structuredClone(DEFAULT_DJ_CONFIG),
-        ...saved,
-        transitions: { ...DEFAULT_DJ_CONFIG.transitions, ...saved.transitions },
-      };
-    }
+    if (raw) return normaliseDjConfig(JSON.parse(raw));
   } catch {
-    // ignore: storage may be blocked or hold an old shape
+    // ignore: storage may be blocked or broken
   }
   return structuredClone(DEFAULT_DJ_CONFIG);
 }

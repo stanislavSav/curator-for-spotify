@@ -1,6 +1,19 @@
-import { DJ_PLAYLIST_DESCRIPTION, type DjCreateRequest, type DjSetRecord, type DjSetSummary } from '@curator/shared';
+import {
+  DJ_PLAYLIST_DESCRIPTION,
+  normaliseDjConfig,
+  type DjCreateRequest,
+  type DjSetConfig,
+  type DjSetRecord,
+  type DjSetResult,
+  type DjSetSummary,
+  type DjSetTrack,
+  type DjTransition,
+  type DjTransitionPatch,
+} from '@curator/shared';
 import { nowIso, type DB } from '../../db/db.ts';
 import type { SpotifyClient } from '../../spotify/client.ts';
+import { parseCamelot } from './harmony.ts';
+import { AUTO, suggestTransition } from './transitions.ts';
 
 interface Row {
   id: string;
@@ -13,18 +26,52 @@ interface Row {
 
 const playlistUrl = (id: string | null) => (id ? `https://open.spotify.com/playlist/${id}` : null);
 
+const end = (t: DjSetTrack) => ({ bpm: t.bpm, camelot: parseCamelot(t.camelot), energy: t.energy });
+
+/**
+ * Sets saved before task 006 have transitions without settings (style, bars,
+ * eqHint, cutHint). They get fresh suggestions from the stored tracks; when the
+ * tracks are missing, Auto.
+ */
+function normaliseTransition(raw: unknown, i: number, tracks: DjSetTrack[], cfg: DjSetConfig): DjTransition {
+  const t = (raw && typeof raw === 'object' ? raw : {}) as Partial<DjTransition>;
+  if (t.settings && typeof t.settings === 'object') {
+    return { ...t, suggested: t.suggested ?? t.settings, applied: t.applied === true } as DjTransition;
+  }
+  const a = tracks[i];
+  const b = tracks[i + 1];
+  if (a && b && a.bpm > 0 && b.bpm > 0) return suggestTransition(end(a), end(b), cfg);
+  return {
+    settings: { ...AUTO },
+    suggested: { ...AUTO },
+    bpmDeltaPct: t.bpmDeltaPct ?? 0,
+    keyRelation: t.keyRelation ?? 'unknown',
+    energyDelta: t.energyDelta ?? null,
+    reason: t.reason ?? '',
+    applied: false,
+  };
+}
+
 function toRecord(r: Row): DjSetRecord {
-  const result = JSON.parse(r.result_json) as DjSetRecord['result'];
+  const config = normaliseDjConfig(JSON.parse(r.config_json));
+  const stored = JSON.parse(r.result_json) as DjSetResult;
+  const tracks = stored.tracks ?? [];
+  const result: DjSetResult = {
+    ...stored,
+    tracks,
+    transitions: (stored.transitions ?? []).map((t, i) => normaliseTransition(t, i, tracks, config)),
+  };
   return {
     id: r.id,
     name: r.name,
     createdAt: r.created_at,
-    tracks: result.tracks.length,
+    tracks: tracks.length,
     durationMs: result.durationMs,
     score: result.score.total,
+    applied: result.transitions.filter((t) => t.applied).length,
     spotifyPlaylistId: r.spotify_playlist_id,
     spotifyUrl: playlistUrl(r.spotify_playlist_id),
-    config: JSON.parse(r.config_json),
+    config,
     result,
   };
 }
@@ -46,6 +93,24 @@ export function listDjSets(db: DB): DjSetSummary[] {
     const { config: _c, result: _r, ...summary } = toRecord(r);
     return summary;
   });
+}
+
+/**
+ * Edits one transition of a created set (settings and/or the Applied tick).
+ * Returns null when the set or the index does not exist. Also stores the
+ * normalised result, so an old-shape set is migrated on its first edit.
+ */
+export function patchDjTransition(db: DB, id: string, index: number, patch: DjTransitionPatch): DjSetRecord | null {
+  const set = getDjSet(db, id);
+  const current = set?.result.transitions[index];
+  if (!set || !current) return null;
+  set.result.transitions[index] = {
+    ...current,
+    ...(patch.settings ? { settings: patch.settings } : {}),
+    ...(patch.applied !== undefined ? { applied: patch.applied } : {}),
+  };
+  db.prepare('UPDATE dj_sets SET result_json = ? WHERE id = ?').run(JSON.stringify(set.result), id);
+  return getDjSet(db, id);
 }
 
 /**

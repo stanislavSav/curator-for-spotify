@@ -36,11 +36,12 @@ export function HowToApply({ url }: { url: string | null }) {
   );
 }
 
-export function SheetExportButtons({ result, name }: { result: DjSetResult; name?: string | null }) {
+/** Copy and Print. `applied` adds the Applied ticks (created sets only). */
+export function SheetExportButtons({ result, name, applied = false }: { result: DjSetResult; name?: string | null; applied?: boolean }) {
   const [copied, setCopied] = useState<'ok' | 'failed' | null>(null);
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(sheetAsText(result, name));
+      await navigator.clipboard.writeText(sheetAsText(result, name, { applied }));
       setCopied('ok');
     } catch {
       setCopied('failed');
@@ -48,7 +49,7 @@ export function SheetExportButtons({ result, name }: { result: DjSetResult; name
     setTimeout(() => setCopied(null), 2000);
   };
   const print = () => {
-    const html = sheetAsHtml(result, name).replace('</body>', '<script>window.onload=()=>window.print()</script></body>');
+    const html = sheetAsHtml(result, name, { applied }).replace('</body>', '<script>window.onload=()=>window.print()</script></body>');
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     window.open(url, '_blank');
     setTimeout(() => URL.revokeObjectURL(url), 60_000);

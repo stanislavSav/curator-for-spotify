@@ -83,8 +83,24 @@ Spotify's in-app feature that plays a playlist with DJ-style transitions. It can
 _Avoid_: crossfade, automix
 
 **Transition**:
-How one track hands over to the next in a Mix: a style (Auto, Fade, Rise, and others), a length in bars, and EQ or filter settings.
-_Avoid_: blend (Blend is one of the styles)
+How one track hands over to the next in a Mix: a Mix Preset, a length in bars, and the Transition Settings.
+_Avoid_: blend (Blend is one of the presets)
+
+**Mix Preset**:
+One of Spotify's named transition presets (Custom, Auto, Fade, Rise, Blend, Wave, Melt, Slam, Dissolve, Surge, Afterglow, No transition).
+_Avoid_: style, template
+
+**Transition Settings**:
+The five values in Spotify's transition editor: Volume, EQ, Filter, Effects and Looping.
+_Avoid_: parameters, knobs
+
+**Sheet Style**:
+The flavour of a whole Transition Sheet (Balanced, Smooth & long, Club cuts, Ambient washes) that steers which Transition Settings are suggested.
+_Avoid_: preset, mode
+
+**Set Template**:
+A saved starting point for a DJ Set's settings (for example "Friday warm-up").
+_Avoid_: preset
 
 **Transition Sheet**:
 The tool's per-pair list of suggested Transitions for a DJ Set. The user applies it by hand in the Spotify Mix editor.

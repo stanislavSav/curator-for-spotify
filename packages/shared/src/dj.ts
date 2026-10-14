@@ -6,7 +6,6 @@ import type { TimeRange } from './domain.ts';
 
 export type CurvePreset = 'warmup-peak-cooldown' | 'steady' | 'build' | 'wave' | 'cooldown';
 export type KeyStrictness = 'strict' | 'relaxed' | 'off';
-export type TransitionStyle = 'Auto' | 'Fade' | 'Rise' | 'Blend';
 export type TransitionBars = 2 | 4 | 8 | 16;
 export type KeyRelation = 'same' | 'adjacent' | 'relative' | 'energy-boost' | 'clash' | 'unknown';
 
@@ -37,20 +36,20 @@ export type DjLength = { mode: 'minutes'; minutes: number } | { mode: 'tracks'; 
 export type DjCurve = { preset: CurvePreset } | { preset: 'custom'; points: number[] };
 
 export interface DjTransitionRules {
-  /** Compatible key and tempo within 3 % → long Blend (or Fade) with a low swap. */
+  /** Compatible key and tempo within 3 % → long blend with a bass swap. */
   longBlendWhenCompatible: boolean;
-  /** Energy rises by 0.15 or more → Rise, 8 bars. */
+  /** Energy rises by 0.15 or more → a build (high-pass in, bass swap at the end). */
   riseOnEnergyJump: boolean;
-  /** Key clash or tempo step above the max → short Fade, or a cut hint. */
+  /** Key clash or tempo step above the max → short and masked (echo out), or No transition when it is big. */
   shortFadeOnClash: boolean;
   /** Key unknown on either side → leave it on Auto. */
   autoWhenUnknown: boolean;
 }
 
 export interface DjTransitionPrefs {
+  /** The flavour of the whole Transition Sheet. */
+  sheetStyle: SheetStyle;
   defaultBars: 4 | 8 | 16;
-  /** Styles the sheet may suggest. Auto is always allowed. */
-  styles: { Fade: boolean; Rise: boolean; Blend: boolean };
   rules: DjTransitionRules;
 }
 
@@ -89,11 +88,42 @@ export const DEFAULT_DJ_CONFIG: DjSetConfig = {
   lockedTrackIds: [],
   excludedTrackIds: [],
   transitions: {
+    sheetStyle: 'balanced',
     defaultBars: 8,
-    styles: { Fade: true, Rise: true, Blend: true },
     rules: { longBlendWhenCompatible: true, riseOnEnergyJump: true, shortFadeOnClash: true, autoWhenUnknown: true },
   },
 };
+
+/**
+ * Fills a stored or partial config (older versions, localStorage) up to the
+ * current shape. Unknown keys are dropped; missing ones take the defaults.
+ */
+export function normaliseDjConfig(raw: unknown): DjSetConfig {
+  type RawPrefs = Partial<Omit<DjTransitionPrefs, 'rules'>> & { rules?: Partial<DjTransitionRules> };
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Omit<DjSetConfig, 'transitions'>> & {
+    transitions?: RawPrefs;
+  };
+  const d = DEFAULT_DJ_CONFIG;
+  const t: RawPrefs = r.transitions ?? {};
+  return {
+    pool: r.pool ? { ...d.pool, ...r.pool, recent: { ...d.pool.recent, ...r.pool.recent } } : d.pool,
+    length: r.length ?? d.length,
+    curve: r.curve ?? d.curve,
+    bpmRange: r.bpmRange === undefined ? d.bpmRange : r.bpmRange,
+    maxBpmStepPct: r.maxBpmStepPct ?? d.maxBpmStepPct,
+    allowHalfDouble: r.allowHalfDouble ?? d.allowHalfDouble,
+    keyStrictness: r.keyStrictness ?? d.keyStrictness,
+    artistSpacing: r.artistSpacing ?? d.artistSpacing,
+    startTrackId: r.startTrackId ?? null,
+    lockedTrackIds: r.lockedTrackIds ?? [],
+    excludedTrackIds: r.excludedTrackIds ?? [],
+    transitions: {
+      sheetStyle: t.sheetStyle && t.sheetStyle in SHEET_STYLES ? t.sheetStyle : d.transitions.sheetStyle,
+      defaultBars: t.defaultBars ?? d.transitions.defaultBars,
+      rules: { ...d.transitions.rules, ...t.rules },
+    },
+  };
+}
 
 export const KEY_LIMIT: Record<KeyStrictness, number> = { strict: 1, relaxed: 2, off: Infinity };
 
@@ -121,37 +151,131 @@ export function curveTarget(curve: DjCurve, p: number): number {
   return pts[i]! + (pts[i + 1]! - pts[i]!) * (x - i);
 }
 
-// ---- Transition styles ------------------------------------------------------
+// ---- Spotify Mix transition settings ----------------------------------------
+// Option names are copied exactly from Spotify's "Edit transition" panel
+// (desktop, 2026-10), so the user can match them by eye. "in" acts on the
+// incoming track, "out" on the outgoing one. Lists may grow; see
+// docs/tasks/006-dj-transitions.
+
+/** Spotify's Mix presets, in the order the editor shows them. */
+export const MIX_PRESETS = [
+  'Custom',
+  'Auto',
+  'Fade',
+  'Rise',
+  'Blend',
+  'Wave',
+  'Melt',
+  'Slam',
+  'Dissolve',
+  'Surge',
+  'Afterglow',
+  'No transition',
+] as const;
+export type MixPreset = (typeof MIX_PRESETS)[number];
+
+export const VOLUME_OPTIONS = [
+  'Smooth crossfade',
+  'Overlap',
+  'Fade in fade out',
+  'Cut in fade out',
+  'Fade in cut out',
+  'Center cut',
+  'Crossfade',
+  'Fade in fast out',
+] as const;
+export type VolumeOption = (typeof VOLUME_OPTIONS)[number];
+
+export const EQ_OPTIONS = [
+  'Center bass swap',
+  'End bass swap',
+  'Start bass swap',
+  '3-band fade',
+  'Quick bass cut',
+  'Long bass cut',
+  'Start fade out',
+  'Bass fade out',
+  'None',
+] as const;
+export type EqOption = (typeof EQ_OPTIONS)[number];
+
+export const FILTER_OPTIONS = [
+  'Low pass filter out',
+  'Low pass filter in',
+  'Low pass filter in low pass filter out',
+  'Low pass filter in high pass filter out',
+  'High pass filter out',
+  'High pass filter in',
+  'High pass filter in high pass filter out',
+  'High pass filter in low pass filter out',
+  'High-pass filter half out',
+  'Noise out end',
+  'None',
+] as const;
+export type FilterOption = (typeof FILTER_OPTIONS)[number];
+
+export const EFFECTS_OPTIONS = [
+  'Reverb out center',
+  'Reverb cut end',
+  'Reverb out end',
+  'Delay ½ cut end',
+  'Delay ¾ cut end',
+  'Echo ½ cut end',
+  'Echo ½ out end',
+  'Echo ¾ cut end',
+  'Echo ¾ out end',
+  'Echo 1 cut end',
+  'Echo 1 out end',
+  'None',
+] as const;
+export type EffectsOption = (typeof EFFECTS_OPTIONS)[number];
+
+export const LOOPING_OPTIONS = ['1 beat loop', '2 beat loop', '4 beat loop', '8 beat loop', '16 beat loop', 'None'] as const;
+export type LoopingOption = (typeof LOOPING_OPTIONS)[number];
+
+export const BAR_OPTIONS: TransitionBars[] = [2, 4, 8, 16];
 
 /**
- * Spotify Mix presets the sheet may suggest (research 02). Only Auto, Fade and
- * Rise are named by Spotify. Blend comes from press reports. The EQ details of
- * each preset come from one third-party guide and are UNVERIFIED.
+ * The values to set in Spotify for one pair. With preset Custom all five
+ * settings are given. With Auto, No transition or another named preset they
+ * are null: the preset decides.
  */
-export const TRANSITION_STYLES: Record<TransitionStyle, { status: 'official' | 'likely'; about: string }> = {
-  Auto: {
-    status: 'official',
-    about: 'Spotify picks the transition from key, tempo and beat data. This is the default when you tap Mix.',
-  },
-  Fade: {
-    status: 'official',
-    about: 'Spotify preset. A standard crossfade; the bass swaps near the middle (detail UNVERIFIED).',
-  },
-  Rise: {
-    status: 'official',
-    about:
-      'Spotify preset. Overlap with the bass swap at the end, a high-pass on the outgoing and a low-pass on the incoming track (detail UNVERIFIED).',
-  },
-  Blend: {
-    status: 'likely',
-    about:
-      'UNVERIFIED: named by press (TechCrunch, MBW), not by Spotify. Overlap with a smooth 3-band EQ fade. If you do not see it, use Fade.',
-  },
-};
+export interface TransitionSettings {
+  preset: MixPreset;
+  bars: TransitionBars | null;
+  volume: VolumeOption | null;
+  eq: EqOption | null;
+  filter: FilterOption | null;
+  effects: EffectsOption | null;
+  looping: LoopingOption | null;
+}
 
-/** Spotify shows a bar choice only when it finds a clear beat grid. Seen values: 2, 4, 8 (12 reported). */
-export const BARS_NOTE =
-  'Bar lengths in Spotify are UNVERIFIED (2, 4 and 8 were seen; 12 was reported). If your length is not offered, pick the closest one.';
+/** The five rows of Spotify's editor, with its colours. */
+export const SETTING_ROWS = [
+  { key: 'volume', label: 'Volume', color: '#4aa3ff', options: VOLUME_OPTIONS },
+  { key: 'eq', label: 'EQ', color: '#f5c518', options: EQ_OPTIONS },
+  { key: 'filter', label: 'Filter', color: '#e879f9', options: FILTER_OPTIONS },
+  { key: 'effects', label: 'Effects', color: '#e4e4e7', options: EFFECTS_OPTIONS },
+  { key: 'looping', label: 'Looping', color: '#fb923c', options: LOOPING_OPTIONS },
+] as const;
+export type SettingKey = (typeof SETTING_ROWS)[number]['key'];
+
+/**
+ * What a named preset sets, once someone has looked it up in Spotify. Empty
+ * until then: the sheet suggests Custom with explicit values. When a Custom
+ * suggestion matches an entry here exactly, the sheet can name the preset.
+ */
+export const PRESET_VALUES: Partial<Record<MixPreset, Omit<TransitionSettings, 'preset' | 'bars'>>> = {};
+
+/** Sheet Style: the flavour of the whole Transition Sheet. */
+export type SheetStyle = 'balanced' | 'smooth' | 'club' | 'ambient';
+
+export const SHEET_STYLES: Record<SheetStyle, { label: string; about: string }> = {
+  balanced: { label: 'Balanced', about: 'Bass swaps and clean crossfades; short and masked when keys clash.' },
+  smooth: { label: 'Smooth & long', about: 'Long blends (8–16 bars), soft crossfades, no hard cuts.' },
+  club: { label: 'Club cuts', about: 'Short, punchy mixes, loops on builds, hard cuts on clashes.' },
+  ambient: { label: 'Ambient washes', about: 'Long smooth crossfades with filters and reverb tails.' },
+};
 
 // ---- result -----------------------------------------------------------------
 
@@ -170,18 +294,18 @@ export interface DjSetTrack {
 }
 
 export interface DjTransition {
-  style: TransitionStyle;
-  /** Null for Auto: Spotify decides. */
-  bars: TransitionBars | null;
+  /** What to set in Spotify. Starts as the suggestion; the user may edit it. */
+  settings: TransitionSettings;
+  /** The rule engine's suggestion, kept so an edit can be reset. */
+  suggested: TransitionSettings;
   /** Signed tempo change to the next track in percent, after half/double folding. */
   bpmDeltaPct: number;
   keyRelation: KeyRelation;
   /** Energy of next minus energy of this track; null when one is unknown. */
   energyDelta: number | null;
-  eqHint: string | null;
-  /** Big jump: a quick cut may sound better than any blend. */
-  cutHint: boolean;
   reason: string;
+  /** The user has set this transition in Spotify (only for created sets). */
+  applied: boolean;
 }
 
 export interface DjScore {
@@ -251,6 +375,8 @@ export interface DjSetSummary {
   tracks: number;
   durationMs: number;
   score: number;
+  /** Transitions ticked as applied in Spotify, out of tracks − 1. */
+  applied: number;
   spotifyPlaylistId: string | null;
   spotifyUrl: string | null;
 }
@@ -258,6 +384,12 @@ export interface DjSetSummary {
 export interface DjSetRecord extends DjSetSummary {
   config: DjSetConfig;
   result: DjSetResult;
+}
+
+/** PATCH /api/dj/sets/:id/transitions/:index */
+export interface DjTransitionPatch {
+  settings?: TransitionSettings;
+  applied?: boolean;
 }
 
 export const DJ_PLAYLIST_DESCRIPTION =

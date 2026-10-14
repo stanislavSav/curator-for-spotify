@@ -1,98 +1,116 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type {
-  DjCreateRequest,
-  DjPoolOptions,
-  DjSetConfig,
-  DjSetRecord,
-  DjSetResult,
-  DjSetSummary,
-  Job,
+import {
+  normaliseDjConfig,
+  type DjCreateRequest,
+  type DjPoolOptions,
+  type DjSetConfig,
+  type DjSetRecord,
+  type DjSetResult,
+  type DjSetSummary,
+  type DjTransitionPatch,
+  type Job,
 } from '@curator/shared';
 import { api, useJob } from '../api.ts';
 import { Button, Card, Empty, ErrorNote, JobProgress, Stat } from '../components/ui.tsx';
 import { HowToApply, SheetExportButtons } from './dj/ApplyPanel.tsx';
+import { ApplyMode } from './dj/ApplyMode.tsx';
 import { ConfigPanel } from './dj/ConfigPanel.tsx';
-import { loadConfig, saveConfig } from './dj/presets.ts';
+import { appliedCount, editResult } from './dj/edits.ts';
+import { shapeOf, useDjSet, useLivePreview, useNow } from './dj/hooks.ts';
 import { SetChart } from './dj/SetChart.tsx';
 import { fmtDuration } from './dj/sheet.ts';
-import { TransitionSheet } from './dj/TransitionSheet.tsx';
+import { rebuiltAgo } from './dj/summaries.ts';
+import { loadConfig, saveConfig } from './dj/templates.ts';
+import { AppliedProgress, TrackList, TransitionSheet } from './dj/TransitionSheet.tsx';
 
 const randomSeed = () => Math.floor(Math.random() * 2 ** 31);
 const today = () => new Date().toISOString().slice(0, 10);
-/** Locks only matter for the next build, so they do not make the shown set stale. */
-const shapeOf = (c: DjSetConfig) => JSON.stringify({ ...c, lockedTrackIds: [] });
+const toggleIn = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 
 // Owned by the dj feature.
 export function DjPage() {
   const qc = useQueryClient();
   const [config, setConfigState] = useState(loadConfig);
+  const [seed, setSeed] = useState(randomSeed);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [applyOpen, setApplyOpen] = useState(false);
+  const now = useNow();
+
+  /** Any settings change rebuilds the preview and returns to the builder. */
   const setConfig = (c: DjSetConfig) => {
     setConfigState(c);
     saveConfig(c);
+    setViewingId(null);
   };
-  const [seed, setSeed] = useState(randomSeed);
-  const [built, setBuilt] = useState<{ config: DjSetConfig; result: DjSetResult } | null>(null);
-  const [viewingId, setViewingId] = useState<string | null>(null);
+  const view = (id: string | null) => {
+    setApplyOpen(false);
+    setViewingId(id);
+  };
 
   const options = useQuery({ queryKey: ['dj', 'pool-options'], queryFn: () => api<DjPoolOptions>('/api/dj/pool-options') });
   const history = useQuery({ queryKey: ['dj', 'sets'], queryFn: () => api<DjSetSummary[]>('/api/dj/sets') });
-  const viewing = useQuery({
-    queryKey: ['dj', 'set', viewingId],
-    queryFn: () => api<DjSetRecord>(`/api/dj/sets/${viewingId}`),
-    enabled: viewingId != null,
-  });
-
-  const preview = useMutation({
-    mutationFn: (req: { config: DjSetConfig; seed: number }) =>
-      api<DjSetResult>('/api/dj/preview', { method: 'POST', json: req }),
-    onSuccess: (result, req) => setBuilt({ config: req.config, result }),
-  });
-  const build = (c: DjSetConfig, s: number) => {
-    setViewingId(null);
-    create.reset();
-    preview.mutate({ config: c, seed: s });
-  };
+  const live = useLivePreview(config, seed);
+  const built = live.built;
+  const saved = useDjSet(viewingId);
 
   const create = useMutation({
     mutationFn: (req: DjCreateRequest) => api<{ job: Job; setId: string }>('/api/dj/sets', { method: 'POST', json: req }),
   });
   const job = useJob(create.data?.job.id ?? null);
   const jobDone = job.data?.status === 'done';
-  const created = useQuery({
-    queryKey: ['dj', 'set', create.data?.setId],
-    queryFn: () => api<DjSetRecord>(`/api/dj/sets/${create.data!.setId}`),
-    enabled: jobDone && create.data != null,
-  });
+  const creating = create.isPending || job.data?.status === 'running';
+  const [justCreated, setJustCreated] = useState<string | null>(null);
   useEffect(() => {
-    if (jobDone) void qc.invalidateQueries({ queryKey: ['dj', 'sets'] });
-  }, [jobDone, qc]);
-
-  const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
-  const actions = built && {
-    lockedIds: config.lockedTrackIds,
-    startId: config.startTrackId,
-    busy: preview.isPending,
-    onLock: (id: string) => setConfig({ ...config, lockedTrackIds: toggle(config.lockedTrackIds, id) }),
-    onStart: (id: string) => {
-      const c = { ...config, startTrackId: config.startTrackId === id ? null : id };
-      setConfig(c);
-      build(c, seed);
-    },
-    onRemove: (id: string) => {
-      const c = {
-        ...config,
-        excludedTrackIds: [...config.excludedTrackIds, id],
-        lockedTrackIds: config.lockedTrackIds.filter((x) => x !== id),
-        startTrackId: config.startTrackId === id ? null : config.startTrackId,
-      };
-      setConfig(c);
-      build(c, seed);
-    },
-  };
+    if (!jobDone || !create.data) return;
+    void qc.invalidateQueries({ queryKey: ['dj', 'sets'] });
+    setJustCreated(create.data.setId);
+    view(create.data.setId);
+  }, [jobDone, create.data?.setId]);
+  // A new preview is a new set: allow creating it.
+  useEffect(() => {
+    if (!creating) create.reset();
+  }, [built?.at]);
 
   const stale = built != null && shapeOf(built.config) !== shapeOf(config);
-  const viewed = viewingId ? viewing.data : null;
+  const record = viewingId ? saved.record : undefined;
+
+  const footer = (
+    <div className="space-y-2">
+      {config.excludedTrackIds.length + config.lockedTrackIds.length > 0 && (
+        <div className="space-y-0.5 text-xs text-zinc-400">
+          {config.lockedTrackIds.length > 0 && (
+            <FooterLine label={`${config.lockedTrackIds.length} locked track(s)`} action="Unlock all" onClick={() => setConfig({ ...config, lockedTrackIds: [] })} />
+          )}
+          {config.excludedTrackIds.length > 0 && (
+            <FooterLine label={`${config.excludedTrackIds.length} removed track(s)`} action="Bring back" onClick={() => setConfig({ ...config, excludedTrackIds: [] })} />
+          )}
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2 text-xs text-zinc-400" aria-live="polite">
+          {live.pending ? (
+            <>
+              <Spinner /> Rebuilding…
+            </>
+          ) : live.error ? (
+            <span className="text-red-300">Rebuild failed</span>
+          ) : built ? (
+            `${rebuiltAgo(built.at, now)} · ${built.result.tracks.length} tracks`
+          ) : null}
+        </span>
+        <Button
+          onClick={() => {
+            setSeed(randomSeed());
+            view(null);
+          }}
+          title="Build again with another random seed. Edits stay on pairs that remain."
+        >
+          Regenerate
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -100,121 +118,160 @@ export function DjPage() {
         <h1 className="text-2xl font-semibold">DJ Set</h1>
         <p className="mt-1 max-w-3xl text-sm text-zinc-400">
           Build a playlist ordered for smooth transitions by BPM, Camelot key and an Energy Curve. Choose a Pool on the
-          left, then press <b>Build set</b>. Check the Transition Sheet, create the playlist on Spotify, and apply the
-          transitions in Spotify › Mix.
+          left; the set rebuilds as you change settings. Check the Transition Sheet, create the playlist on Spotify,
+          then set each transition in Spotify › Mix and tick it here.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-        <aside className="space-y-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto">
-          <Card>
-            <ConfigPanel config={config} onChange={setConfig} options={options.data} />
-            {config.excludedTrackIds.length + config.lockedTrackIds.length > 0 && (
-              <div className="mt-4 space-y-1 border-t border-zinc-800 pt-3 text-xs text-zinc-400">
-                {config.lockedTrackIds.length > 0 && (
-                  <div className="flex justify-between">
-                    <span>{config.lockedTrackIds.length} locked track(s)</span>
-                    <button className="hover:text-zinc-100" onClick={() => setConfig({ ...config, lockedTrackIds: [] })}>
-                      Unlock all
-                    </button>
-                  </div>
-                )}
-                {config.excludedTrackIds.length > 0 && (
-                  <div className="flex justify-between">
-                    <span>{config.excludedTrackIds.length} removed track(s)</span>
-                    <button className="hover:text-zinc-100" onClick={() => setConfig({ ...config, excludedTrackIds: [] })}>
-                      Bring back
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            <ErrorNote error={options.error} />
-          </Card>
-          <Button variant="primary" className="w-full justify-center" disabled={preview.isPending} onClick={() => build(config, seed)}>
-            {preview.isPending ? 'Building…' : 'Build set'}
-          </Button>
+        <aside className="flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start">
+          <ConfigPanel
+            config={config}
+            onChange={setConfig}
+            options={options.data}
+            usable={built?.result.pool.usable ?? null}
+            footer={footer}
+          />
+          {options.error != null && (
+            <div className="p-3">
+              <ErrorNote error={options.error} />
+            </div>
+          )}
         </aside>
 
         <div className="min-w-0 space-y-6">
-          <ErrorNote error={preview.error} />
-          {viewed ? (
-            <SavedSetView record={viewed} onClose={() => setViewingId(null)} onUseSettings={() => setConfig(viewed.config)} />
+          {viewingId ? (
+            record ? (
+              <SavedSetView
+                record={record}
+                justCreated={justCreated === record.id}
+                onUpdate={saved.update}
+                onApply={() => setApplyOpen(true)}
+                onClose={() => view(null)}
+                onUseSettings={() => setConfig(normaliseDjConfig(record.config))}
+                error={saved.error}
+              />
+            ) : (
+              <Card>
+                <ErrorNote error={saved.error} />
+                {saved.loading && <Empty>Loading the set…</Empty>}
+              </Card>
+            )
           ) : built ? (
             <>
-              {stale && (
-                <p className="rounded bg-amber-950/50 p-2 text-sm text-amber-300">
-                  Settings changed. Press Build set to see them.
-                </p>
-              )}
+              <ErrorNote error={live.error} />
               <ResultSummary result={built.result} />
-              <Card
-                title="Energy and tempo"
-                actions={
-                  <Button
-                    disabled={preview.isPending}
-                    onClick={() => {
-                      const s = randomSeed();
-                      setSeed(s);
-                      build(config, s);
-                    }}
-                    title="Build again with another random seed"
-                  >
-                    Regenerate
-                  </Button>
-                }
-              >
+              <CarryNote carried={built.carried} />
+              <Card title="Energy and tempo">
                 <SetChart result={built.result} foldHalfDouble={built.config.allowHalfDouble} />
               </Card>
-              <Card title="Transition Sheet" actions={<SheetExportButtons result={built.result} />}>
+              <TracksCard result={built.result}>
+                <TrackList
+                  result={built.result}
+                  actions={{
+                    lockedIds: config.lockedTrackIds,
+                    startId: config.startTrackId,
+                    onLock: (id) => setConfig({ ...config, lockedTrackIds: toggleIn(config.lockedTrackIds, id) }),
+                    onStart: (id) => setConfig({ ...config, startTrackId: config.startTrackId === id ? null : id }),
+                    onRemove: (id) =>
+                      setConfig({
+                        ...config,
+                        excludedTrackIds: [...config.excludedTrackIds, id],
+                        lockedTrackIds: config.lockedTrackIds.filter((x) => x !== id),
+                        startTrackId: config.startTrackId === id ? null : config.startTrackId,
+                      }),
+                  }}
+                />
+              </TracksCard>
+              <Card
+                title="Transition Sheet"
+                actions={
+                  <>
+                    <Button variant="ghost" onClick={() => setApplyOpen(true)} disabled={built.result.transitions.length === 0} title="One transition at a time, full screen">
+                      Apply mode
+                    </Button>
+                    <SheetExportButtons result={built.result} />
+                  </>
+                }
+              >
                 <p className="mb-3 text-xs text-zinc-500">
-                  One suggested Mix Transition per pair. These are suggestions; Spotify decides what is possible for each
-                  pair. A * marks a style that Spotify has not confirmed. Lock tracks you want to keep, then Regenerate.
+                  A suggestion for each pair. Press Edit on a card to change it; your edits go with the playlist when you
+                  create it. An edit stays through a rebuild as long as the same two tracks still follow each other.
                 </p>
-                <TransitionSheet result={built.result} maxBpmStepPct={built.config.maxBpmStepPct} actions={actions ?? undefined} />
+                <TransitionSheet
+                  result={built.result}
+                  maxBpmStepPct={built.config.maxBpmStepPct}
+                  defaultBars={built.config.transitions.defaultBars}
+                  onEdit={(i, s) => live.edit((r) => editResult(r, i, s))}
+                />
               </Card>
               <CreatePanel
-                disabled={built.result.tracks.length === 0 || stale}
+                disabled={built.result.tracks.length === 0 || stale || live.pending}
+                busy={live.pending || stale}
                 onCreate={(name) => create.mutate({ name, config: built.config, result: built.result })}
-                pending={create.isPending}
+                running={creating}
                 error={create.error}
                 job={job.data}
-                created={created.data}
               />
+              {applyOpen && (
+                <ApplyMode result={built.result} maxBpmStepPct={built.config.maxBpmStepPct} spotifyUrl={null} onClose={() => setApplyOpen(false)} />
+              )}
             </>
           ) : (
             <Card>
+              <ErrorNote error={live.error} />
               <Empty>
-                No set yet. Choose a Pool and the set shape on the left, then press <b>Build set</b>. Building does not
-                change anything on Spotify.
+                {live.pending ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner /> Building a preview… This does not change anything on Spotify.
+                  </span>
+                ) : (
+                  <>No set yet. Choose a Pool and the set shape on the left. Building does not change anything on Spotify.</>
+                )}
               </Empty>
             </Card>
+          )}
+
+          {record && applyOpen && (
+            <ApplyMode
+              result={record.result}
+              maxBpmStepPct={normaliseDjConfig(record.config).maxBpmStepPct}
+              spotifyUrl={record.spotifyUrl}
+              onApplied={(i, v) => saved.update(i, { applied: v })}
+              onClose={() => setApplyOpen(false)}
+            />
           )}
 
           <Card title="Earlier sets">
             <ErrorNote error={history.error} />
             {history.data?.length ? (
               <ul className="divide-y divide-zinc-800 text-sm">
-                {history.data.map((s) => (
-                  <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{s.name}</div>
-                      <div className="text-xs text-zinc-500">
-                        {s.createdAt.slice(0, 10)} · {s.tracks} tracks · {fmtDuration(s.durationMs)} · score {s.score}
+                {history.data.map((s) => {
+                  const pairs = Math.max(0, s.tracks - 1);
+                  return (
+                    <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{s.name}</div>
+                        <div className="text-xs text-zinc-500">
+                          {s.createdAt.slice(0, 10)} · {s.tracks} tracks · {fmtDuration(s.durationMs)} · score {s.score} ·{' '}
+                          <span className={s.applied >= pairs && pairs > 0 ? 'text-brand' : undefined}>
+                            {s.applied ?? 0}/{pairs} applied
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {s.spotifyUrl && (
-                        <a href={s.spotifyUrl} target="_blank" rel="noreferrer" className="rounded-full px-3 py-1 text-sm text-brand hover:bg-zinc-800">
-                          Open in Spotify
-                        </a>
-                      )}
-                      <Button variant="ghost" onClick={() => setViewingId(s.id)}>
-                        View sheet
-                      </Button>
-                    </div>
-                  </li>
-                ))}
+                      <div className="flex gap-2">
+                        {s.spotifyUrl && (
+                          <a href={s.spotifyUrl} target="_blank" rel="noreferrer" className="rounded-full px-3 py-1 text-sm text-brand hover:bg-zinc-800">
+                            Open in Spotify
+                          </a>
+                        )}
+                        <Button variant={viewingId === s.id ? 'secondary' : 'ghost'} onClick={() => view(s.id)}>
+                          {(s.applied ?? 0) < pairs ? 'Continue applying' : 'View sheet'}
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-sm text-zinc-500">Sets you create on Spotify appear here with their Transition Sheet.</p>
@@ -223,6 +280,49 @@ export function DjPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function Spinner() {
+  return <span aria-hidden className="inline-block size-3 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-200" />;
+}
+
+function FooterLine({ label, action, onClick }: { label: string; action: string; onClick: () => void }) {
+  return (
+    <div className="flex justify-between">
+      <span>{label}</span>
+      <button className="hover:text-zinc-100" onClick={onClick}>
+        {action}
+      </button>
+    </div>
+  );
+}
+
+function CarryNote({ carried }: { carried: { kept: number; dropped: number } }) {
+  if (carried.kept + carried.dropped === 0) return null;
+  return (
+    <p className={carried.dropped ? 'rounded bg-amber-950/50 p-2 text-sm text-amber-300' : 'text-xs text-zinc-500'}>
+      {carried.kept > 0 && `Kept your edits on ${carried.kept} transition(s). `}
+      {carried.dropped > 0 &&
+        `${carried.dropped} edited transition(s) are gone because those two tracks no longer follow each other. Lock tracks to keep pairs together.`}
+    </p>
+  );
+}
+
+function TracksCard({ result, children }: { result: DjSetResult; children: ReactNode }) {
+  return (
+    <details className="group rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+        <span className="text-base font-semibold">
+          <span aria-hidden className="mr-2 inline-block text-zinc-500 transition-transform group-open:rotate-90">
+            ›
+          </span>
+          Tracks ({result.tracks.length})
+        </span>
+        <span className="text-xs text-zinc-500">Lock, start or remove tracks</span>
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
   );
 }
 
@@ -265,44 +365,28 @@ function ResultSummary({ result }: { result: DjSetResult }) {
 
 function CreatePanel({
   disabled,
+  busy,
   onCreate,
-  pending,
+  running,
   error,
   job,
-  created,
 }: {
   disabled: boolean;
+  busy: boolean;
   onCreate: (name: string) => void;
-  pending: boolean;
+  running: boolean;
   error: unknown;
   job: Job | undefined;
-  created: DjSetRecord | undefined;
 }) {
   const [name, setName] = useState(`DJ Set ${today()}`);
   const [asking, setAsking] = useState(false);
-  const running = pending || job?.status === 'running';
-
-  if (created) {
-    return (
-      <Card title="Created on Spotify">
-        <p className="mb-3 text-sm text-zinc-300">
-          “{created.name}” is a new private playlist with {created.tracks} tracks.{' '}
-          {created.spotifyUrl && (
-            <a href={created.spotifyUrl} target="_blank" rel="noreferrer" className="text-brand underline">
-              Open it in Spotify
-            </a>
-          )}
-        </p>
-        <HowToApply url={created.spotifyUrl} />
-      </Card>
-    );
-  }
 
   return (
     <Card title="Create on Spotify">
       <p className="mb-3 text-sm text-zinc-400">
-        This makes a new private playlist in this order. It does not change any existing playlist.
-        {disabled && ' Build the set with the current settings first.'}
+        This makes a new private playlist in this order, with this Transition Sheet and your edits. It does not change
+        any existing playlist.
+        {busy && ' Wait for the rebuild to finish.'}
       </p>
       {asking ? (
         <form
@@ -340,14 +424,32 @@ function CreatePanel({
   );
 }
 
-function SavedSetView({ record, onClose, onUseSettings }: { record: DjSetRecord; onClose: () => void; onUseSettings: () => void }) {
+function SavedSetView({
+  record,
+  justCreated,
+  onUpdate,
+  onApply,
+  onClose,
+  onUseSettings,
+  error,
+}: {
+  record: DjSetRecord;
+  justCreated: boolean;
+  onUpdate: (index: number, body: DjTransitionPatch) => void;
+  onApply: () => void;
+  onClose: () => void;
+  onUseSettings: () => void;
+  error: unknown;
+}) {
+  const config = normaliseDjConfig(record.config);
+  const total = record.result.transitions.length;
   return (
     <>
       <Card
         title={record.name}
         actions={
           <>
-            <Button variant="ghost" onClick={onUseSettings} title="Copy this set's settings into the form on the left">
+            <Button variant="ghost" onClick={onUseSettings} title="Copy this set's settings into the panel on the left">
               Use these settings
             </Button>
             <Button onClick={onClose}>Back to builder</Button>
@@ -355,17 +457,53 @@ function SavedSetView({ record, onClose, onUseSettings }: { record: DjSetRecord;
         }
       >
         <p className="mb-3 text-sm text-zinc-400">
-          Created {record.createdAt.slice(0, 10)}. This is a saved copy; the app never changes the playlist on Spotify.
+          {justCreated ? `“${record.name}” is a new private playlist with ${record.tracks} tracks. ` : `Created ${record.createdAt.slice(0, 10)}. `}
+          Set each transition in Spotify, then tick it below. Your ticks and edits are saved here; the app never
+          changes the playlist on Spotify.{' '}
+          {record.spotifyUrl && (
+            <a href={record.spotifyUrl} target="_blank" rel="noreferrer" className="text-brand underline">
+              Open it in Spotify
+            </a>
+          )}
         </p>
-        <HowToApply url={record.spotifyUrl} />
+        <details open={justCreated}>
+          <summary className="cursor-pointer text-sm text-zinc-300">How to apply in Spotify</summary>
+          <div className="mt-2">
+            <HowToApply url={record.spotifyUrl} />
+          </div>
+        </details>
+      </Card>
+      <ErrorNote error={error} />
+      <Card
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            Transition Sheet <AppliedProgress done={appliedCount(record.result)} total={total} />
+          </span>
+        }
+        actions={
+          <>
+            <Button variant="primary" onClick={onApply} disabled={total === 0} title="One transition at a time, full screen">
+              Apply mode
+            </Button>
+            <SheetExportButtons result={record.result} name={record.name} applied />
+          </>
+        }
+      >
+        <TransitionSheet
+          result={record.result}
+          maxBpmStepPct={config.maxBpmStepPct}
+          defaultBars={config.transitions.defaultBars}
+          onEdit={(i, s) => onUpdate(i, { settings: s })}
+          onApplied={(i, v) => onUpdate(i, { applied: v })}
+        />
       </Card>
       <ResultSummary result={record.result} />
       <Card title="Energy and tempo">
-        <SetChart result={record.result} foldHalfDouble={record.config.allowHalfDouble} />
+        <SetChart result={record.result} foldHalfDouble={config.allowHalfDouble} />
       </Card>
-      <Card title="Transition Sheet" actions={<SheetExportButtons result={record.result} name={record.name} />}>
-        <TransitionSheet result={record.result} maxBpmStepPct={record.config.maxBpmStepPct} />
-      </Card>
+      <TracksCard result={record.result}>
+        <TrackList result={record.result} />
+      </TracksCard>
     </>
   );
 }

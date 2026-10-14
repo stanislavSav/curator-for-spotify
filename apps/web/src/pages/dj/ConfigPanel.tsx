@@ -1,22 +1,39 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-  BARS_NOTE,
   CURVE_PRESETS,
   curvePoints,
   curveTarget,
-  TRANSITION_STYLES,
+  SHEET_STYLES,
   type CurvePreset,
   type DjCurve,
   type DjLibraryFilter,
   type DjPoolOptions,
   type DjSetConfig,
   type DjTransitionRules,
+  type SheetStyle,
   type TimeRange,
 } from '@curator/shared';
-import { Badge, Button, cx } from '../../components/ui.tsx';
-import { DJ_PRESETS } from './presets.ts';
+import { cx } from '../../components/ui.tsx';
+import {
+  advancedSummary,
+  KEY_LABELS,
+  keySummary,
+  poolSummary,
+  shapeSummary,
+  tempoSummary,
+  transitionsSummary,
+} from './summaries.ts';
+import { SET_TEMPLATES } from './templates.ts';
 
-type Props = { config: DjSetConfig; onChange: (c: DjSetConfig) => void; options: DjPoolOptions | undefined };
+type Props = {
+  config: DjSetConfig;
+  onChange: (c: DjSetConfig) => void;
+  options: DjPoolOptions | undefined;
+  /** Usable tracks in the last preview, for the Pool summary. */
+  usable: number | null;
+  /** Always visible under the sections (rebuild status, Regenerate). */
+  footer: ReactNode;
+};
 
 const EMPTY_FILTER: DjLibraryFilter = {
   tags: [],
@@ -35,13 +52,26 @@ const RECENT: { id: TimeRange; label: string }[] = [
 ];
 
 const RULES: { id: keyof DjTransitionRules; label: string }[] = [
-  { id: 'longBlendWhenCompatible', label: 'Long blend when key and tempo match' },
-  { id: 'riseOnEnergyJump', label: 'Rise when energy jumps' },
-  { id: 'shortFadeOnClash', label: 'Short Fade or cut on a clash' },
-  { id: 'autoWhenUnknown', label: 'Auto when a key is unknown' },
+  { id: 'longBlendWhenCompatible', label: 'Long blend with a bass swap when key and tempo match' },
+  { id: 'riseOnEnergyJump', label: 'Build (high-pass in) when energy jumps' },
+  { id: 'shortFadeOnClash', label: 'Short and masked on a clash; hard cut when it is big' },
+  { id: 'autoWhenUnknown', label: 'Leave on Auto when a key is unknown' },
 ];
 
-export function ConfigPanel({ config, onChange, options }: Props) {
+const BARS_NOTE = 'Bars are a length to aim for. Spotify sets the exact length of each transition.';
+
+type SectionId = 'pool' | 'shape' | 'tempo' | 'key' | 'transitions' | 'advanced';
+
+export function ConfigPanel({ config, onChange, options, usable, footer }: Props) {
+  const [open, setOpen] = useState<Record<SectionId, boolean>>({
+    pool: true,
+    shape: true,
+    tempo: false,
+    key: false,
+    transitions: false,
+    advanced: false,
+  });
+  const section = (id: SectionId) => ({ open: open[id], onToggle: () => setOpen({ ...open, [id]: !open[id] }) });
   const set = <K extends keyof DjSetConfig>(key: K, value: DjSetConfig[K]) => onChange({ ...config, [key]: value });
   const pool = config.pool;
   const setPool = (p: Partial<DjSetConfig['pool']>) => set('pool', { ...pool, ...p });
@@ -51,170 +81,194 @@ export function ConfigPanel({ config, onChange, options }: Props) {
   const setTr = (t: Partial<DjSetConfig['transitions']>) => set('transitions', { ...tr, ...t });
 
   return (
-    <div className="space-y-5 text-sm">
-      <Group title="Presets" hint="A preset changes the set shape. Your Pool stays.">
-        <div className="flex flex-wrap gap-2">
-          {DJ_PRESETS.map((p) => (
-            <Button key={p.id} title={p.about} onClick={() => onChange(p.apply(config))}>
-              {p.label}
-            </Button>
+    <div className="flex min-h-0 flex-1 flex-col text-sm">
+      <div className="border-b border-zinc-800 px-4 py-3">
+        <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">Set Templates</div>
+        <div className="flex flex-wrap gap-1.5">
+          {SET_TEMPLATES.map((t) => (
+            <Chip key={t.id} on={false} title={`${t.about} Your Pool stays.`} onClick={() => onChange(t.apply(config))}>
+              {t.label}
+            </Chip>
           ))}
         </div>
-      </Group>
+      </div>
 
-      <Group title="Pool" hint="The tracks the set may use. Sources add up.">
-        <PlaylistPicker options={options} selected={pool.playlistIds} onChange={(ids) => setPool({ playlistIds: ids })} />
-
-        <div className="mt-3 space-y-1">
-          <div className="text-xs text-zinc-500">Recent favourites (your top tracks)</div>
-          {RECENT.map((r) => (
-            <Check
-              key={r.id}
-              checked={pool.recent[r.id]}
-              onChange={(v) => setPool({ recent: { ...pool.recent, [r.id]: v } })}
-              label={
-                <>
-                  {r.label} <Count n={options?.recent[r.id]} />
-                </>
-              }
-            />
-          ))}
-        </div>
-
-        <div className="mt-3">
-          <Check
-            checked={lib != null}
-            onChange={(v) => setPool({ library: v ? (lib ?? EMPTY_FILTER) : null })}
-            label={
-              <>
-                Whole Library, filtered <Count n={options?.library.tracks} />
-              </>
-            }
-          />
-          {lib && <LibraryFilter filter={lib} options={options} onChange={setLib} />}
-        </div>
-      </Group>
-
-      <Group title="Length">
-        <div className="flex items-center gap-2">
-          <Segmented
-            value={config.length.mode}
-            options={[
-              { value: 'minutes', label: 'Minutes' },
-              { value: 'tracks', label: 'Tracks' },
-            ]}
-            onChange={(mode) =>
-              set('length', mode === 'minutes' ? { mode, minutes: 60 } : { mode: 'tracks', count: 20 })
-            }
-          />
-          <NumberInput
-            value={config.length.mode === 'minutes' ? config.length.minutes : config.length.count}
-            min={config.length.mode === 'minutes' ? 5 : 2}
-            max={config.length.mode === 'minutes' ? 600 : 300}
-            onChange={(n) =>
-              set('length', config.length.mode === 'minutes' ? { mode: 'minutes', minutes: n } : { mode: 'tracks', count: n })
-            }
-          />
-        </div>
-      </Group>
-
-      <Group title="Energy Curve" hint="The target energy from the first to the last track.">
-        <CurveEditor curve={config.curve} onChange={(c) => set('curve', c)} />
-      </Group>
-
-      <Group title="Tempo">
-        <Check
-          checked={config.bpmRange != null}
-          onChange={(v) => set('bpmRange', v ? { min: 110, max: 130 } : null)}
-          label="Limit the BPM range"
-        />
-        {config.bpmRange && (
-          <div className="mt-2 flex items-center gap-2">
-            <NumberInput value={config.bpmRange.min} min={30} max={300} onChange={(n) => set('bpmRange', { ...config.bpmRange!, min: n })} />
-            <span className="text-zinc-500">to</span>
-            <NumberInput value={config.bpmRange.max} min={30} max={300} onChange={(n) => set('bpmRange', { ...config.bpmRange!, max: n })} />
-            <span className="text-zinc-500">BPM</span>
+      <div className="min-h-0 flex-1 divide-y divide-zinc-800 lg:overflow-y-auto">
+        <Section title="Pool" summary={poolSummary(pool, usable)} {...section('pool')}>
+          <p className="text-xs text-zinc-500">The tracks the set may use. Sources add up.</p>
+          <PlaylistPicker options={options} selected={pool.playlistIds} onChange={(ids) => setPool({ playlistIds: ids })} />
+          <div className="space-y-1">
+            <div className="text-xs text-zinc-500">Recent favourites (your top tracks)</div>
+            {RECENT.map((r) => (
+              <Check
+                key={r.id}
+                checked={pool.recent[r.id]}
+                onChange={(v) => setPool({ recent: { ...pool.recent, [r.id]: v } })}
+                label={
+                  <>
+                    {r.label} <Count n={options?.recent[r.id]} />
+                  </>
+                }
+              />
+            ))}
           </div>
-        )}
-        <BpmHistogram options={options} range={config.bpmRange} />
-        <label className="mt-3 block">
-          <span className="flex justify-between text-zinc-300">
-            Max tempo step <span className="tabular-nums text-zinc-400">{config.maxBpmStepPct} %</span>
-          </span>
-          <input
-            type="range"
-            min={1}
-            max={15}
-            step={0.5}
-            value={config.maxBpmStepPct}
-            onChange={(e) => set('maxBpmStepPct', Number(e.target.value))}
-            className="w-full accent-brand"
-          />
-          <span className="text-xs text-zinc-500">DJs pitch tracks by about 6 %. Under 3 % is ideal.</span>
-        </label>
-        <div className="mt-2">
-          <Check checked={config.allowHalfDouble} onChange={(v) => set('allowHalfDouble', v)} label="Half and double time match (85 ↔ 170)" />
-        </div>
-      </Group>
-
-      <Group title="Key" hint="Camelot wheel distance between neighbours.">
-        <Segmented
-          value={config.keyStrictness}
-          options={[
-            { value: 'strict', label: 'Strict (≤ 1)', title: 'Same key, a neighbour, or relative major/minor only' },
-            { value: 'relaxed', label: 'Relaxed (≤ 2)', title: 'Also allows two steps and diagonal moves' },
-            { value: 'off', label: 'Off', title: 'Ignore keys' },
-          ]}
-          onChange={(v) => set('keyStrictness', v)}
-        />
-      </Group>
-
-      <Group title="Artist spacing">
-        <div className="flex items-center gap-2">
-          <span className="text-zinc-300">No same artist within</span>
-          <NumberInput value={config.artistSpacing} min={0} max={20} onChange={(n) => set('artistSpacing', n)} />
-          <span className="text-zinc-300">tracks</span>
-        </div>
-      </Group>
-
-      <Group title="Transitions" hint="Defaults for the Transition Sheet.">
-        <div className="flex items-center gap-2">
-          <span className="text-zinc-300" title={BARS_NOTE}>
-            Default length
-          </span>
-          <Segmented
-            value={String(tr.defaultBars)}
-            options={['4', '8', '16'].map((b) => ({ value: b, label: `${b} bars`, title: BARS_NOTE }))}
-            onChange={(b) => setTr({ defaultBars: Number(b) as 4 | 8 | 16 })}
-          />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
-          {(['Fade', 'Rise', 'Blend'] as const).map((s) => (
+          <div>
             <Check
-              key={s}
-              checked={tr.styles[s]}
-              onChange={(v) => setTr({ styles: { ...tr.styles, [s]: v } })}
-              title={TRANSITION_STYLES[s].about}
+              checked={lib != null}
+              onChange={(v) => setPool({ library: v ? (lib ?? EMPTY_FILTER) : null })}
               label={
                 <>
-                  {s}
-                  {TRANSITION_STYLES[s].status === 'likely' && (
-                    <Badge tone="warn" title={TRANSITION_STYLES[s].about}>
-                      unverified
-                    </Badge>
-                  )}
+                  Whole Library, filtered <Count n={options?.library.tracks} />
                 </>
               }
             />
-          ))}
-        </div>
-        <div className="mt-3 space-y-1">
-          {RULES.map((r) => (
-            <Check key={r.id} checked={tr.rules[r.id]} onChange={(v) => setTr({ rules: { ...tr.rules, [r.id]: v } })} label={r.label} />
-          ))}
-        </div>
-      </Group>
+            {lib && <LibraryFilter filter={lib} options={options} onChange={setLib} />}
+          </div>
+        </Section>
+
+        <Section title="Shape" summary={shapeSummary(config)} {...section('shape')}>
+          <div className="flex items-center gap-2">
+            <Segmented
+              value={config.length.mode}
+              options={[
+                { value: 'minutes', label: 'Minutes' },
+                { value: 'tracks', label: 'Tracks' },
+              ]}
+              onChange={(mode) => set('length', mode === 'minutes' ? { mode, minutes: 60 } : { mode: 'tracks', count: 20 })}
+            />
+            <NumberInput
+              value={config.length.mode === 'minutes' ? config.length.minutes : config.length.count}
+              min={config.length.mode === 'minutes' ? 5 : 2}
+              max={config.length.mode === 'minutes' ? 600 : 300}
+              onChange={(n) =>
+                set('length', config.length.mode === 'minutes' ? { mode: 'minutes', minutes: n } : { mode: 'tracks', count: n })
+              }
+            />
+          </div>
+          <div>
+            <div className="mb-1 text-xs text-zinc-500">Energy Curve: the target energy from the first to the last track.</div>
+            <CurveEditor curve={config.curve} onChange={(c) => set('curve', c)} />
+          </div>
+        </Section>
+
+        <Section title="Tempo" summary={tempoSummary(config)} {...section('tempo')}>
+          <Check
+            checked={config.bpmRange != null}
+            onChange={(v) => set('bpmRange', v ? { min: 110, max: 130 } : null)}
+            label="Limit the BPM range"
+          />
+          {config.bpmRange && (
+            <div className="flex items-center gap-2">
+              <NumberInput value={config.bpmRange.min} min={30} max={300} onChange={(n) => set('bpmRange', { ...config.bpmRange!, min: n })} />
+              <span className="text-zinc-500">to</span>
+              <NumberInput value={config.bpmRange.max} min={30} max={300} onChange={(n) => set('bpmRange', { ...config.bpmRange!, max: n })} />
+              <span className="text-zinc-500">BPM</span>
+            </div>
+          )}
+          <BpmHistogram options={options} range={config.bpmRange} />
+          <label className="block">
+            <span className="flex justify-between text-zinc-300">
+              Max tempo step <span className="tabular-nums text-zinc-400">{config.maxBpmStepPct} %</span>
+            </span>
+            <input
+              type="range"
+              min={1}
+              max={15}
+              step={0.5}
+              value={config.maxBpmStepPct}
+              onChange={(e) => set('maxBpmStepPct', Number(e.target.value))}
+              className="w-full accent-brand"
+            />
+            <span className="text-xs text-zinc-500">DJs pitch tracks by about 6 %. Under 3 % is ideal.</span>
+          </label>
+        </Section>
+
+        <Section title="Key" summary={keySummary(config)} {...section('key')}>
+          <p className="text-xs text-zinc-500">Camelot wheel distance between neighbours.</p>
+          <Segmented
+            value={config.keyStrictness}
+            options={[
+              { value: 'strict', label: KEY_LABELS.strict, title: 'Same key, a neighbour, or relative major/minor only' },
+              { value: 'relaxed', label: KEY_LABELS.relaxed, title: 'Also allows two steps and diagonal moves' },
+              { value: 'off', label: KEY_LABELS.off, title: 'Ignore keys' },
+            ]}
+            onChange={(v) => set('keyStrictness', v)}
+          />
+        </Section>
+
+        <Section title="Transitions" summary={transitionsSummary(config)} {...section('transitions')}>
+          <div>
+            <div className="mb-1 text-xs text-zinc-500">Sheet Style: the flavour of the suggested transitions.</div>
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(SHEET_STYLES) as SheetStyle[]).map((id) => (
+                <Chip key={id} on={tr.sheetStyle === id} title={SHEET_STYLES[id].about} onClick={() => setTr({ sheetStyle: id })}>
+                  {SHEET_STYLES[id].label}
+                </Chip>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-zinc-400">{SHEET_STYLES[tr.sheetStyle].about}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-300" title={BARS_NOTE}>
+              Default length
+            </span>
+            <Segmented
+              value={String(tr.defaultBars)}
+              options={['4', '8', '16'].map((b) => ({ value: b, label: `${b} bars`, title: BARS_NOTE }))}
+              onChange={(b) => setTr({ defaultBars: Number(b) as 4 | 8 | 16 })}
+            />
+          </div>
+        </Section>
+
+        <Section title="Advanced" summary={advancedSummary(config)} {...section('advanced')}>
+          <Check checked={config.allowHalfDouble} onChange={(v) => set('allowHalfDouble', v)} label="Half and double time match (85 ↔ 170)" />
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-300">No same artist within</span>
+            <NumberInput value={config.artistSpacing} min={0} max={20} onChange={(n) => set('artistSpacing', n)} />
+            <span className="text-zinc-300">tracks</span>
+          </div>
+          <div className="space-y-1">
+            <div className="text-xs text-zinc-500">Transition rules</div>
+            {RULES.map((r) => (
+              <Check key={r.id} checked={tr.rules[r.id]} onChange={(v) => setTr({ rules: { ...tr.rules, [r.id]: v } })} label={r.label} />
+            ))}
+          </div>
+        </Section>
+      </div>
+
+      <div className="sticky bottom-0 border-t border-zinc-800 bg-zinc-900 px-4 py-3">{footer}</div>
     </div>
+  );
+}
+
+function Section({
+  title,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  summary: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section>
+      <button
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-4 py-2.5 text-left hover:bg-zinc-800/40"
+      >
+        <span aria-hidden className={cx('inline-block w-3 text-zinc-500 transition-transform', open && 'rotate-90')}>
+          ›
+        </span>
+        <span className="shrink-0 font-medium text-zinc-100">{title}</span>
+        {!open && <span className="ml-auto min-w-0 truncate text-xs text-zinc-500" title={summary}>{summary}</span>}
+      </button>
+      {open && <div className="space-y-3 px-4 pb-4">{children}</div>}
+    </section>
   );
 }
 
@@ -248,7 +302,7 @@ function PlaylistPicker({
         placeholder="Find a playlist"
         className="mb-1 w-full rounded bg-zinc-800 px-2 py-1 text-sm placeholder:text-zinc-500"
       />
-      <div className="max-h-44 space-y-0.5 overflow-y-auto pr-1">
+      <div className="max-h-40 space-y-0.5 overflow-y-auto pr-1">
         {shown.map((p) => (
           <Check
             key={p.id}
@@ -456,17 +510,6 @@ function BpmHistogram({ options, range }: { options: DjPoolOptions | undefined; 
 
 // ---- small controls ---------------------------------------------------------
 
-function Group({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
-  return (
-    <section>
-      <h3 className="font-medium text-zinc-100">{title}</h3>
-      {hint && <p className="mb-2 text-xs text-zinc-500">{hint}</p>}
-      {!hint && <div className="mb-2" />}
-      {children}
-    </section>
-  );
-}
-
 function Check({ checked, onChange, label, title }: { checked: boolean; onChange: (v: boolean) => void; label: ReactNode; title?: string }) {
   return (
     <label className="flex cursor-pointer items-center gap-2 text-zinc-300 hover:text-zinc-100" title={title}>
@@ -480,11 +523,13 @@ function Count({ n }: { n: number | undefined }) {
   return n == null ? null : <span className="text-xs tabular-nums text-zinc-500">({n})</span>;
 }
 
-function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+function Chip({ on, onClick, title, children }: { on: boolean; onClick: () => void; title?: string; children: ReactNode }) {
   return (
     <button
       onClick={onClick}
-      className={cx('rounded-full px-2 py-0.5 text-xs', on ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700')}
+      title={title}
+      aria-pressed={on}
+      className={cx('rounded-full px-2.5 py-1 text-xs', on ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700')}
     >
       {children}
     </button>

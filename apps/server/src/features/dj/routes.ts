@@ -7,8 +7,8 @@ import { latestJob, startJob } from '../../jobs/jobs.ts';
 import { spotify, type SpotifyClient } from '../../spotify/client.ts';
 import { buildDjSet } from './order.ts';
 import { buildCandidates, poolOptions } from './pool.ts';
-import { djCreateSchema, djPreviewSchema } from './schema.ts';
-import { createDjSet, getDjSet, listDjSets } from './sets.ts';
+import { djCreateSchema, djPreviewSchema, djTransitionPatchSchema } from './schema.ts';
+import { createDjSet, getDjSet, listDjSets, patchDjTransition } from './sets.ts';
 
 interface Deps {
   db: () => DB;
@@ -57,6 +57,13 @@ export function makeDjRoutes(deps: Deps) {
     .get('/sets/:id', (c) => {
       const set = getDjSet(deps.db(), c.req.param('id'));
       return set ? c.json(set) : c.json({ error: 'DJ Set not found' }, 404);
+    })
+    .patch('/sets/:id/transitions/:index', async (c) => {
+      const p = await parse(djTransitionPatchSchema, c.req);
+      if ('error' in p) return c.json({ error: p.error }, 400);
+      const index = Number(c.req.param('index'));
+      const set = Number.isInteger(index) ? patchDjTransition(deps.db(), c.req.param('id'), index, p.data) : null;
+      return set ? c.json(set) : c.json({ error: 'DJ Set or transition not found' }, 404);
     });
 }
 
