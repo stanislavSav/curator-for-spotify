@@ -16,6 +16,7 @@ import {
   type DjPreviewRequest,
   type DjTemplateInput,
   type DjSheetRequest,
+  type DjSpotifyUpdateRequest,
   type DjWorkspaceInput,
   type DjSetConfig,
   type DjSetResult,
@@ -173,6 +174,12 @@ export const djWorkspaceSchema = z.object({
   result: djSetResultSchema,
   fromDraft: z.object({ id: z.string().min(1).max(64), name: z.string().max(100) }).nullable(),
 }) satisfies z.ZodType<DjWorkspaceInput>;
+
+export const djSpotifyUpdateSchema = z.object({
+  name: z.string().trim().min(1, 'Give the set a name').max(100),
+  config: incomingConfig,
+  result: djSetResultSchema,
+}) satisfies z.ZodType<DjSpotifyUpdateRequest>;
 
 export const djSheetSchema = z.object({
   tracks: z.array(djSetTrackSchema).min(2, 'A sheet needs at least two tracks'),

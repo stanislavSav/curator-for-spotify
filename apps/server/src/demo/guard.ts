@@ -29,6 +29,7 @@ const BLOCKED: [method: string, path: RegExp][] = [
   ['POST', /^\/api\/proposals\/apply\/?$/],
   ['POST', /^\/api\/dj\/sets\/?$/],
   ['POST', /^\/api\/dj\/sets\/[^/]+\/create\/?$/],
+  ['POST', /^\/api\/dj\/sets\/[^/]+\/update\/?$/],
   ['POST', /^\/auth\/logout\/?$/],
 ];
 

@@ -19,6 +19,7 @@ import {
   djDraftUpdateSchema,
   djPreviewSchema,
   djSheetSchema,
+  djSpotifyUpdateSchema,
   djTemplateInputSchema,
   djTemplatePatchSchema,
   djTransitionPatchSchema,
@@ -34,8 +35,7 @@ import {
   patchDjTransition,
   saveDjDraft,
   sheetFor,
-  updateDjDraft,
-} from './sets.ts';
+  updateDjDraft, updateDjSetOnSpotify } from './sets.ts';
 import { createTemplate, deleteTemplate, listTemplates, TemplateNameTakenError, updateTemplate } from './templates.ts';
 
 interface Deps {
@@ -156,6 +156,30 @@ export function makeDjRoutes(deps: Deps) {
         db,
       );
       return c.json({ job, setId: draft.id }, 202);
+    })
+    .post('/sets/:id/update', async (c) => {
+      if (isDemo()) return c.json({ error: DEMO_MESSAGE, code: 'demo' }, 403);
+      const p = await parse(djSpotifyUpdateSchema, c.req);
+      if ('error' in p) return c.json({ error: p.error }, 400);
+      const db = deps.db();
+      const set = getDjSet(db, c.req.param('id'));
+      if (!set) return c.json({ error: 'DJ Set not found' }, 404);
+      if (set.status !== 'created' || !set.spotifyPlaylistId) {
+        return c.json({ error: 'Only a set that is on Spotify can be updated there. Create it on Spotify first.' }, 409);
+      }
+      if (createRunning(db) || latestJob('update-dj-set', db)?.status === 'running') return c.json({ error: CREATING_MESSAGE }, 409);
+      const req = p.data;
+      const job = startJob(
+        'update-dj-set',
+        async (ctx) => {
+          const r = await updateDjSetOnSpotify(db, deps.client(), set, req, ctx.progress);
+          const ticks = r.changedPairs ? ` ${r.changedPairs} changed pair(s) need applying in Mix again.` : '';
+          const rename = r.renameFailed ? ' The name could not be changed on Spotify.' : r.renamed ? ` Renamed to “${req.name}”.` : '';
+          return `Updated “${set.name}” on Spotify with ${req.result.tracks.length} tracks.${rename}${ticks}`;
+        },
+        db,
+      );
+      return c.json({ job, setId: set.id }, 202);
     })
     .delete('/sets/:id', (c) => {
       const id = c.req.param('id');

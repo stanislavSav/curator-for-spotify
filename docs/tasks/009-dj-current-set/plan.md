@@ -66,3 +66,22 @@ The owner found the layout awkward: Earlier sets sat at the bottom of the page, 
 - **Checked in the demo:**
   - Unsaved set → Saved sets → click "Sunday Deep Drift" → the question appears under it → Replace it → the drawer closes and the draft opens exactly (same first track, "Editing draft" note).
   - Reopening the drawer shows the "Open in builder" badge; Esc closes it.
+
+## Follow-up: Update on Spotify (2026-10-14)
+
+The owner noticed there was only "Create on Spotify": a set that was already on Spotify could not be updated.
+
+- **Server:** `POST /api/dj/sets/:id/update` (`DjSpotifyUpdateRequest`: name, config, result) starts job `update-dj-set`.
+  - It replaces the playlist's items: PUT `/playlists/{id}/items` with the first 100, then POST the rest (`SpotifyClient.replaceItems`).
+  - It renames the playlist when the name changed (PUT `/playlists/{id}`, `updatePlaylistDetails`). A failed rename does not undo the track update.
+  - It stores the new config and sheet. Applied ticks stay only on pairs (outgoing → incoming track) that did not change.
+  - A 404 from Spotify ("playlist gone") turns into a clear message.
+  - It returns 409 for Drafts and while a create or update runs; it is blocked in demo mode (route and guard).
+- **Web:** when the Current Set is a copy of a set on Spotify, the panel becomes **Save to Spotify** with **Update "…" on Spotify**, *Create a new playlist*, *Save draft* and *Open in Spotify*.
+  - Update asks for the name (prefilled) and warns that Spotify may reset transitions already set in Mix after a reorder (ADR 0002), and that changed pairs lose their Applied tick.
+  - After the job, the copy's name follows the playlist.
+- **Removed** the "Update draft" button: Drafts already save automatically.
+- **Checked:**
+  - Route test with a fake Spotify: replace + rename calls, name and tracks stored, ticks kept on the unchanged pairs only; Drafts refused; unknown set 404.
+  - In the demo (with a set marked "on Spotify" in the demo database only): opening it shows the Save to Spotify panel and the confirmation; the update is refused with the demo message.
+  - Not run against the real Spotify account.

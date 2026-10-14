@@ -9,13 +9,14 @@ import {
   type DjSetStatus,
   type DjSetSummary,
   type DjSetTrack,
+  type DjSpotifyUpdateRequest,
   type DjTransition,
   type DjTransitionPatch,
   type TransitionSettings,
   toBars,
 } from '@curator/shared';
 import { nowIso, type DB } from '../../db/db.ts';
-import type { SpotifyClient } from '../../spotify/client.ts';
+import { SpotifyApiError, type SpotifyClient } from '../../spotify/client.ts';
 import { parseCamelot } from './harmony.ts';
 import { AUTO, likelyNoBeatGrid, setPositions, suggestTransition, type SetPosition, type TransitionEnd } from './transitions.ts';
 
@@ -225,4 +226,64 @@ export async function createDjDraftOnSpotify(
   progress(uris.length, uris.length, 'Saving the set…');
   db.prepare(`UPDATE dj_sets SET status = 'created', spotify_playlist_id = ? WHERE id = ?`).run(playlist.id, draft.id);
   return playlist;
+}
+
+/**
+ * Updates a created set's playlist on Spotify: replaces its tracks with the new
+ * order, renames it when the name changed, and stores the new sheet. Applied
+ * ticks stay only on pairs (outgoing → incoming track) that did not change;
+ * Spotify may still reset Mix transitions after a reorder (ADR 0002), which the
+ * UI says before the user confirms.
+ */
+export async function updateDjSetOnSpotify(
+  db: DB,
+  client: SpotifyClient,
+  set: DjSetRecord,
+  req: DjSpotifyUpdateRequest,
+  progress: (done: number, total: number, message?: string) => void = () => {},
+): Promise<{ renamed: boolean; renameFailed: boolean; changedPairs: number }> {
+  const playlistId = set.spotifyPlaylistId!;
+  const uris = req.result.tracks.map((t) => t.uri);
+  progress(0, uris.length, 'Replacing the tracks on Spotify…');
+  try {
+    await client.replaceItems(playlistId, uris);
+  } catch (err) {
+    if (err instanceof SpotifyApiError && err.status === 404) {
+      throw new Error('This playlist is no longer on Spotify. Create a new playlist instead.');
+    }
+    throw err;
+  }
+
+  let renamed = false;
+  let renameFailed = false;
+  const name = req.name.trim();
+  if (name && name !== set.name) {
+    progress(uris.length, uris.length, 'Renaming the playlist…');
+    try {
+      await client.updatePlaylistDetails(playlistId, { name });
+      renamed = true;
+    } catch {
+      // The tracks are updated; a failed rename should not undo that.
+      renameFailed = true;
+    }
+  }
+
+  const key = (r: DjSetResult, i: number) => `${r.tracks[i]?.id}>${r.tracks[i + 1]?.id}`;
+  const ticked = new Map(set.result.transitions.map((t, i) => [key(set.result, i), t.applied]));
+  let changedPairs = 0;
+  const transitions = req.result.transitions.map((t, i) => {
+    const before = ticked.get(key(req.result, i));
+    if (before === undefined) changedPairs++;
+    return { ...t, applied: before ?? false };
+  });
+
+  progress(uris.length, uris.length, 'Saving the set…');
+  db.prepare('UPDATE dj_sets SET name = ?, config_json = ?, result_json = ?, updated_at = ? WHERE id = ?').run(
+    renamed ? name : set.name,
+    JSON.stringify(normaliseDjConfig(req.config)),
+    JSON.stringify({ ...req.result, transitions }),
+    nowIso(),
+    set.id,
+  );
+  return { renamed, renameFailed, changedPairs };
 }

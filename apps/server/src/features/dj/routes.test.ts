@@ -177,6 +177,48 @@ describe('dj routes', () => {
     expect((await app.request('/sets/nope')).status).toBe(404);
   });
 
+  it('POST /sets/:id/update replaces the playlist on Spotify, renames it and keeps ticks on unchanged pairs', async () => {
+    const { app, db, calls } = setup();
+    const { setId, result } = await createSet(app, db);
+    // Tick the first two pairs as applied in Spotify.
+    for (const i of [0, 1]) await app.request(`/sets/${setId}/transitions/${i}`, patch({ applied: true }));
+
+    // Swap the last two tracks: pairs 0–3 stay, pair 4 changes.
+    const tracks = [...result.tracks];
+    [tracks[4], tracks[5]] = [tracks[5]!, tracks[4]!];
+    const sheet = (await (await app.request('/sheet', post({ tracks, config: poolCfg(6) }))).json()) as DjSetResult['transitions'];
+    const next = { ...result, tracks, transitions: sheet };
+
+    calls.length = 0;
+    const res = await app.request(`/sets/${setId}/update`, post({ name: 'Test set v2', config: poolCfg(6), result: next }));
+    expect(res.status).toBe(202);
+    const { job } = (await res.json()) as { job: Job };
+    const done = await waitForJob(db, job.id);
+    expect(done.status).toBe('done');
+    expect(done.message).toMatch(/Renamed to “Test set v2”/);
+
+    const replace = calls.find((c) => c.method === 'PUT' && c.url.endsWith('/playlists/newpl/items'))!;
+    expect((replace.body as { uris: string[] }).uris).toEqual(tracks.map((t) => t.uri));
+    const rename = calls.find((c) => c.method === 'PUT' && c.url.endsWith('/playlists/newpl'))!;
+    expect(rename.body).toEqual({ name: 'Test set v2' });
+
+    const one = (await (await app.request(`/sets/${setId}`)).json()) as DjSetRecord;
+    expect(one.name).toBe('Test set v2');
+    expect(one.status).toBe('created');
+    expect(one.result.tracks.map((t) => t.id)).toEqual(tracks.map((t) => t.id));
+    expect(one.result.transitions.map((t) => t.applied)).toEqual([true, true, false, false, false]);
+  });
+
+  it('POST /sets/:id/update refuses drafts', async () => {
+    const { app } = setup();
+    const cfg = poolCfg(6);
+    const result = (await (await app.request('/preview', post({ config: cfg, seed: 2 }))).json()) as DjSetResult;
+    const draft = (await (await app.request('/drafts', post({ name: 'Draft', config: cfg, result }))).json()) as DjSetRecord;
+    const res = await app.request(`/sets/${draft.id}/update`, post({ name: 'Draft', config: cfg, result }));
+    expect(res.status).toBe(409);
+    expect((await app.request('/sets/nope/update', post({ name: 'x', config: cfg, result }))).status).toBe(404);
+  });
+
   it('POST /sets needs a name', async () => {
     const { app } = setup();
     const cfg = config();

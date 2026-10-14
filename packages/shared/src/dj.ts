@@ -483,6 +483,17 @@ export interface DjWorkspace extends DjWorkspaceInput {
   updatedAt: string;
 }
 
+/**
+ * POST /api/dj/sets/:id/update — replace a created set's playlist on Spotify
+ * with these tracks (in this order), rename it if the name changed, and store
+ * the new sheet. Answers { job, setId } like create.
+ */
+export interface DjSpotifyUpdateRequest {
+  name: string;
+  config: DjSetConfig;
+  result: DjSetResult;
+}
+
 /** POST /api/dj/drafts — save a DJ Set in the app without creating it on Spotify. */
 export interface DjDraftRequest {
   name: string;

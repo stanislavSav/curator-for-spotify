@@ -61,7 +61,7 @@ export interface Tag {
   source: 'spotify-genre' | 'musicbrainz' | 'wikidata' | 'listenbrainz' | 'discogs';
 }
 
-export type JobKind = 'sync' | 'enrich' | 'snapshot' | 'history-import' | 'prune' | 'apply-proposals' | 'create-dj-set' | 'dj-ai-pass';
+export type JobKind = 'sync' | 'enrich' | 'snapshot' | 'history-import' | 'prune' | 'apply-proposals' | 'create-dj-set' | 'update-dj-set' | 'dj-ai-pass';
 export type JobStatus = 'running' | 'done' | 'failed';
 
 export interface Job {

@@ -128,6 +128,17 @@ export class SpotifyClient {
     }
   }
 
+  /** Replaces all items of a playlist with these, in order (first 100 replace, the rest are added). */
+  async replaceItems(playlistId: string, uris: string[]) {
+    await this.put(`/playlists/${playlistId}/items`, { uris: uris.slice(0, 100) });
+    await this.addItems(playlistId, uris.slice(100));
+  }
+
+  /** Changes a playlist's name and/or description. */
+  async updatePlaylistDetails(playlistId: string, details: { name?: string; description?: string }) {
+    await this.put(`/playlists/${playlistId}`, details);
+  }
+
   /** Delete (owned) or unfollow (followed) playlists. Spotify has no hard delete. */
   async removeFromLibrary(uris: string[]) {
     for (let i = 0; i < uris.length; i += 40) {

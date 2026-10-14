@@ -7,6 +7,7 @@ import {
   type DjDraftUpdate,
   type DjPoolOptions,
   type DjSetConfig,
+  type DjSpotifyUpdateRequest,
   type DjSetRecord,
   type DjSetResult,
   type DjSetSummary,
@@ -140,6 +141,21 @@ export function DjPage() {
     setJustCreated(id);
     view(id);
   }, [jobDone, create.data?.setId]);
+  /** Update on Spotify: replace a created set's playlist with the Current Set (a copy of it). */
+  const updateSpotify = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: DjSpotifyUpdateRequest }) =>
+      api<{ job: Job; setId: string }>(`/api/dj/sets/${id}/update`, { method: 'POST', json: body }),
+  });
+  const updateJob = useJob(updateSpotify.data?.job.id ?? null);
+  const updatingSpotify = updateSpotify.isPending || updateJob.data?.status === 'running';
+  useEffect(() => {
+    if (updateJob.data?.status !== 'done' || !updateSpotify.data) return;
+    const id = updateSpotify.data.setId;
+    void qc.invalidateQueries({ queryKey: ['dj', 'sets'] });
+    void qc
+      .fetchQuery({ queryKey: ['dj', 'set', id], queryFn: () => api<DjSetRecord>(`/api/dj/sets/${id}`), staleTime: 0 })
+      .then((r) => setBasedOn((b) => (b?.id === r.id ? { id: r.id, name: r.name, url: r.spotifyUrl } : b)));
+  }, [updateJob.data?.status, updateSpotify.data?.setId]);
   // A new preview is a new set: allow creating it.
   useEffect(() => {
     if (!creating) create.reset();
@@ -547,20 +563,14 @@ export function DjPage() {
                 job={createdDraftId ? undefined : job.data}
                 onSaveDraft={(name) => saveDraft.mutate({ name, config: built.config, result: built.result })}
                 savingDraft={saveDraft.isPending}
-                fromDraft={fromDraft}
-                onUpdateDraft={(id) =>
-                  putDraft.mutate(
-                    { id, body: { config: built.config, result: built.result } },
-                    {
-                      onSuccess: (r) => {
-                        setJustSaved(null);
-                        view(r.id);
-                      },
-                    },
-                  )
+                draftError={saveDraft.error ?? (fromDraft ? null : putDraft.error)}
+                spotifyTarget={basedOn ? { name: basedOn.name, url: basedOn.url } : null}
+                onUpdateSpotify={(name) =>
+                  basedOn && updateSpotify.mutate({ id: basedOn.id, body: { name, config: built.config, result: built.result } })
                 }
-                updatingDraft={putDraft.isPending}
-                draftError={saveDraft.error ?? putDraft.error}
+                updatingSpotify={updatingSpotify}
+                updateError={updateSpotify.error}
+                updateJob={updateJob.data}
               />
               {applyOpen && (
                 <ApplyMode result={built.result} maxBpmStepPct={built.config.maxBpmStepPct} spotifyUrl={null} onClose={() => setApplyOpen(false)} />
@@ -710,10 +720,12 @@ function CreatePanel({
   job,
   onSaveDraft,
   savingDraft,
-  fromDraft,
-  onUpdateDraft,
-  updatingDraft,
   draftError,
+  spotifyTarget,
+  onUpdateSpotify,
+  updatingSpotify,
+  updateError,
+  updateJob,
 }: {
   disabled: boolean;
   busy: boolean;
@@ -724,24 +736,40 @@ function CreatePanel({
   job: Job | undefined;
   onSaveDraft: (name: string) => void;
   savingDraft: boolean;
-  fromDraft: { id: string; name: string } | null;
-  onUpdateDraft: (id: string) => void;
-  updatingDraft: boolean;
   draftError: unknown;
+  /** The Current Set is a copy of this set on Spotify, so it can update that playlist. */
+  spotifyTarget: { name: string; url: string | null } | null;
+  onUpdateSpotify: (name: string) => void;
+  updatingSpotify: boolean;
+  updateError: unknown;
+  updateJob: Job | undefined;
 }) {
   const [name, setName] = useState(suggestedName);
-  const [asking, setAsking] = useState<'create' | 'draft' | null>(null);
-  const ask = (mode: 'create' | 'draft') => {
-    setName(suggestedName);
+  const [asking, setAsking] = useState<'create' | 'draft' | 'update' | null>(null);
+  const ask = (mode: 'create' | 'draft' | 'update') => {
+    setName(mode === 'update' && spotifyTarget ? spotifyTarget.name : suggestedName);
     setAsking(mode);
   };
-  const working = running || savingDraft || updatingDraft;
+  const working = running || savingDraft || updatingSpotify;
+  // Close the form once a job has started; its progress shows below.
+  useEffect(() => {
+    if (running || updatingSpotify) setAsking(null);
+  }, [running, updatingSpotify]);
 
   return (
-    <Card title="Create on Spotify">
+    <Card title={spotifyTarget ? 'Save to Spotify' : 'Create on Spotify'}>
       <p className="mb-3 text-sm text-zinc-400">
-        This makes a new private playlist in this order, with this Transition Sheet and your edits. It does not change
-        any existing playlist. Save draft keeps the set in this app only, to finish later.
+        {spotifyTarget ? (
+          <>
+            This set is a copy of “{spotifyTarget.name}”, which is on Spotify. Update that playlist with this order and sheet,
+            create a new playlist, or save a draft.
+          </>
+        ) : (
+          <>
+            This makes a new private playlist in this order, with this Transition Sheet and your edits. It does not change
+            any existing playlist. Save draft keeps the set in this app only, to finish later.
+          </>
+        )}
         {busy && ' Wait for the rebuild to finish.'}
       </p>
       {asking ? (
@@ -752,19 +780,37 @@ function CreatePanel({
             const n = name.trim();
             if (!n) return;
             if (asking === 'create') onCreate(n);
+            else if (asking === 'update') onUpdateSpotify(n);
             else onSaveDraft(n);
           }}
         >
+          {asking === 'update' && (
+            <p className="w-full rounded-lg bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+              This replaces the playlist's tracks with this order. Spotify may reset transitions you already set in Mix to
+              Auto when a playlist is reordered. Pairs that changed lose their Applied tick here, so apply them again; check the
+              others in Apply mode.
+            </p>
+          )}
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
-            aria-label={asking === 'create' ? 'Playlist name' : 'Draft name'}
+            aria-label={asking === 'draft' ? 'Draft name' : 'Playlist name'}
             className="min-w-60 flex-1 rounded bg-zinc-800 px-3 py-1.5 text-sm"
           />
           <Button variant="primary" type="submit" disabled={disabled || working || !name.trim()}>
-            {asking === 'create' ? (running ? 'Creating…' : 'Create playlist') : savingDraft ? 'Saving…' : 'Save draft'}
+            {asking === 'create'
+              ? running
+                ? 'Creating…'
+                : 'Create playlist'
+              : asking === 'update'
+                ? updatingSpotify
+                  ? 'Updating…'
+                  : 'Update on Spotify'
+                : savingDraft
+                  ? 'Saving…'
+                  : 'Save draft'}
           </Button>
           <Button variant="ghost" type="button" onClick={() => setAsking(null)} disabled={working}>
             Cancel
@@ -772,28 +818,35 @@ function CreatePanel({
         </form>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" disabled={disabled} onClick={() => ask('create')}>
-            Create on Spotify
+          {spotifyTarget && (
+            <Button
+              variant="primary"
+              disabled={disabled || working}
+              onClick={() => ask('update')}
+              title="Replace the playlist's tracks on Spotify with this order, and store this sheet"
+            >
+              Update “{spotifyTarget.name}” on Spotify
+            </Button>
+          )}
+          <Button variant={spotifyTarget ? 'secondary' : 'primary'} disabled={disabled || working} onClick={() => ask('create')}>
+            {spotifyTarget ? 'Create a new playlist' : 'Create on Spotify'}
           </Button>
-          <Button disabled={disabled} onClick={() => ask('draft')} title="Keep this set in the app without creating it on Spotify">
+          <Button disabled={disabled || working} onClick={() => ask('draft')} title="Keep this set in the app without creating it on Spotify">
             Save draft
           </Button>
-          {fromDraft && (
-            <Button
-              variant="secondary"
-              disabled={disabled || working}
-              onClick={() => onUpdateDraft(fromDraft.id)}
-              title={`Replace the tracks and sheet of the draft “${fromDraft.name}” with this set`}
-            >
-              {updatingDraft ? 'Updating…' : `Update draft “${fromDraft.name}”`}
-            </Button>
+          {spotifyTarget?.url && (
+            <a href={spotifyTarget.url} target="_blank" rel="noreferrer" className="rounded-full px-3 py-1 text-sm text-brand hover:bg-zinc-800">
+              Open in Spotify
+            </a>
           )}
         </div>
       )}
       <div className="mt-3 space-y-2">
         <ErrorNote error={error} />
         <ErrorNote error={draftError} />
+        <ErrorNote error={updateError} />
         <JobProgress job={job} />
+        <JobProgress job={updateJob} />
       </div>
     </Card>
   );
