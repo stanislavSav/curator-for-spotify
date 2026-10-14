@@ -78,7 +78,7 @@ Rules:
   effects: ${list(EFFECTS_OPTIONS)}
   looping: ${list(LOOPING_OPTIONS)}
 - "in" acts on the incoming (next) track, "out" on the outgoing (current) track.
-- bars: ${BAR_OPTIONS.join(', ')} only. Spotify offers no more than 8.
+- bars: ${BAR_OPTIONS.join(', ')} only. Spotify offers 16 only for some tracks: use 16 only for long blends between compatible tracks with nearly the same tempo, otherwise 8 or less.
 - Use preset "Custom" with all five values set, unless "Auto" or "No transition" is clearly better; then set bars and the five values to null.
 - Keep the current settings where they are already good. Change what a DJ would change.
 - Sheet Style: ${SHEET_STYLES[sheetStyle].label} (${SHEET_STYLES[sheetStyle].about})

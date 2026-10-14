@@ -13,7 +13,7 @@ describe('buildAiPassPrompt', () => {
       expect(prompt).toContain(list.map((x) => `"${x}"`).join(', '));
     }
     expect(prompt).toContain('"in" acts on the incoming (next) track, "out" on the outgoing (current) track.');
-    expect(prompt).toContain('bars: 2, 4, 8 only');
+    expect(prompt).toContain('bars: 2, 4, 8, 16 only. Spotify offers 16 only for some tracks');
     expect(prompt).toContain('Sheet Style: Balanced');
     expect(prompt).toContain('Colour: Medium');
     expect(prompt).toContain("The user's focus: more echo, darker");

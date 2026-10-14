@@ -61,7 +61,7 @@ const RULES: { id: keyof DjTransitionRules; label: string }[] = [
   { id: 'autoWhenUnknown', label: 'Leave on Auto when a key is unknown' },
 ];
 
-const BARS_NOTE = 'Bars are a length to aim for, up to 8. Spotify sets the exact length, and shows no bar choice when it finds no clear beat.';
+const BARS_NOTE = 'Bars are a length to aim for: 2, 4 or 8, and 16 for some tracks. Spotify sets the exact length, and shows no bar choice when it finds no clear beat.';
 
 type SectionId = 'pool' | 'shape' | 'tempo' | 'key' | 'transitions' | 'advanced';
 
@@ -221,8 +221,8 @@ export function ConfigPanel({ config, onChange, templates, options, usable, foot
             </span>
             <Segmented
               value={String(tr.defaultBars)}
-              options={['4', '8'].map((b) => ({ value: b, label: `${b} bars`, title: BARS_NOTE }))}
-              onChange={(b) => setTr({ defaultBars: b === '4' ? 4 : 8 })}
+              options={['4', '8', '16'].map((b) => ({ value: b, label: `${b} bars`, title: BARS_NOTE }))}
+              onChange={(b) => setTr({ defaultBars: b === '4' ? 4 : b === '16' ? 16 : 8 })}
             />
           </div>
         </Section>

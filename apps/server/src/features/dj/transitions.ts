@@ -92,8 +92,8 @@ const LABEL: Record<Situation, string> = {
 };
 
 const isClash = (s: Situation) => s === 'big-clash' || s === 'soft-clash';
-/** Spotify offers 2, 4 or 8 bars. */
-const clampBars = (n: number, min: TransitionBars, max: TransitionBars = 8): TransitionBars =>
+/** Spotify offers 2, 4, 8, and for some tracks 16 bars. */
+const clampBars = (n: number, min: TransitionBars, max: TransitionBars = 16): TransitionBars =>
   Math.min(max, Math.max(min, n)) as TransitionBars;
 
 const HARD_CUT_VOLUME: Partial<Record<VolumeOption, VolumeOption>> = {
@@ -113,7 +113,7 @@ const CUT_TO_OUT_EFFECT: Partial<Record<EffectsOption, EffectsOption>> = {
 /** Sheet Style transforms on top of the base recipe. Null = No transition. */
 const STYLE: Record<SheetStyle, (x: Recipe, s: Situation) => Recipe | null> = {
   balanced: (x) => x,
-  // No hard cuts: fades instead, with an echo tail to mask the change. Always 8 bars.
+  // No hard cuts: fades instead, with an echo tail to mask the change. Long: 8–16 bars.
   smooth: (x) => {
     const hardCut = HARD_CUT_VOLUME[x.volume];
     let volume = hardCut ?? x.volume;
@@ -135,7 +135,7 @@ const STYLE: Record<SheetStyle, (x: Recipe, s: Situation) => Recipe | null> = {
     return y;
   },
   ambient: (x, s) => ({
-    bars: isClash(s) ? x.bars : 8,
+    bars: isClash(s) ? x.bars : 16,
     volume: 'Smooth crossfade',
     eq: '3-band fade',
     filter: x.filter === 'None' ? 'Low pass filter out' : x.filter,
@@ -393,7 +393,9 @@ function classify(p: Pair, prefs: Prefs): { situation: Situation; bars?: Transit
   if (rules.shortFadeOnClash && (keyClash || absDelta > step)) return { situation: 'soft-clash' };
   if (rules.autoWhenUnknown && rel === 'unknown') return 'auto';
   if (rules.riseOnEnergyJump && energyDelta != null && energyDelta >= 0.15) return { situation: 'build' };
-  if (rules.longBlendWhenCompatible && isCompatible(rel) && absDelta <= 3) return { situation: 'long-blend' };
+  // Same key and nearly the same tempo: the longest blend Spotify may offer (16 bars, not for every track).
+  if (rules.longBlendWhenCompatible && isCompatible(rel) && absDelta <= 3)
+    return { situation: 'long-blend', bars: rel === 'same' && absDelta <= 1.5 ? 16 : clampBars(defaultBars, 8) };
   if (absDelta > step || keyClash) return 'auto';
   if (rel === 'energy-boost') return { situation: 'lift' };
   if (energyDelta != null && energyDelta <= -0.15) return { situation: 'wind-down' };

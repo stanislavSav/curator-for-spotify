@@ -25,7 +25,7 @@ export const RELATION: Record<KeyRelation, { label: string; tone: 'good' | 'info
   unknown: { label: 'key ?', tone: 'neutral', about: 'At least one key is unknown.' },
 };
 
-const BARS_NOTE = 'Bars are a length to aim for, up to 8. Spotify sets the exact length, and shows no bar choice when it finds no clear beat.';
+const BARS_NOTE = 'Bars are a length to aim for: 2, 4 or 8, and 16 for some tracks. Spotify sets the exact length, and shows no bar choice when it finds no clear beat.';
 
 export interface PairProps {
   index: number;

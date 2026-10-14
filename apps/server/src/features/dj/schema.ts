@@ -76,7 +76,7 @@ export const djSetConfigSchema = z.object({
     sheetStyle: z.enum(Object.keys(SHEET_STYLES) as [SheetStyle, ...SheetStyle[]]),
     colour: z.enum(Object.keys(TRANSITION_COLOURS) as [TransitionColour, ...TransitionColour[]]),
     // Older configs allowed 16; incomingConfig normalises that to 8 first.
-    defaultBars: z.union([z.literal(4), z.literal(8)]),
+    defaultBars: z.union([z.literal(4), z.literal(8), z.literal(16)]),
     rules: z.object({
       longBlendWhenCompatible: z.boolean(),
       riseOnEnergyJump: z.boolean(),
@@ -108,8 +108,8 @@ export const djSetTrackSchema = z.object({
   locked: z.boolean(),
 });
 
-/** Spotify offers 2, 4 or 8 bars. Older sets stored 16, which reads as 8. */
-const bars = z.preprocess((v) => (v === 16 ? toBars(v) : v), z.union([z.literal(2), z.literal(4), z.literal(8)]));
+/** Spotify offers 2, 4, 8 and (for some tracks) 16 bars. Stored sets are normalised on read (sets.ts). */
+const bars = z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)]);
 
 /** Every value must be one of Spotify's exact option names (shared lists). */
 export const transitionSettingsSchema = z.object({

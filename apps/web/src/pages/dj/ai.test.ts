@@ -3,6 +3,7 @@ import type { AiPassResult, TransitionSettings } from '@curator/shared';
 import {
   aiBannerText,
   aiChangedCount,
+  BARS_16_NOTE,
   BARS_HIDDEN_NOTE,
   barsNote,
   countAiChanges,
@@ -123,6 +124,14 @@ describe('texts', () => {
     expect(barsNote(transition(CUSTOM))).toBeNull();
     const text = sheetAsText(resultOf([A, B], [transition(CUSTOM, { barsMayBeHidden: true })]));
     expect(text).toContain(`      Bars: ${BARS_HIDDEN_NOTE}`);
+  });
+
+  it('says to fall back to 8 when Spotify does not offer 16 bars', () => {
+    const sixteen = transition({ ...CUSTOM, bars: 16 });
+    expect(barsNote(sixteen)).toBe(BARS_16_NOTE);
+    // A hidden bar choice wins: there is nothing to pick at all.
+    expect(barsNote(transition({ ...CUSTOM, bars: 16 }, { barsMayBeHidden: true }))).toBe(BARS_HIDDEN_NOTE);
+    expect(sheetAsText(resultOf([A, B], [sixteen]))).toContain(`      Bars: ${BARS_16_NOTE}`);
   });
 
   it('marks AI pairs in the copied sheet', () => {

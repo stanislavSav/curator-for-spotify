@@ -6,8 +6,11 @@ import type { TimeRange } from './domain.ts';
 
 export type CurvePreset = 'warmup-peak-cooldown' | 'steady' | 'build' | 'wave' | 'cooldown';
 export type KeyStrictness = 'strict' | 'relaxed' | 'off';
-/** Spotify offers at most 8 bars, and hides the choice when it finds no clear beat grid. */
-export type TransitionBars = 2 | 4 | 8;
+/**
+ * Spotify offers 2, 4 and 8 bars, and 16 only for some tracks; it hides the
+ * choice when it finds no clear beat grid.
+ */
+export type TransitionBars = 2 | 4 | 8 | 16;
 
 /** How much colour (filters, effects, loops) the sheet adds to clean blends. */
 export type TransitionColour = 'subtle' | 'medium' | 'bold';
@@ -55,7 +58,7 @@ export interface DjTransitionPrefs {
   sheetStyle: SheetStyle;
   /** subtle = only what a pair needs; medium/bold add filters, effects and loops to clean blends. */
   colour: TransitionColour;
-  defaultBars: 4 | 8;
+  defaultBars: 4 | 8 | 16;
   rules: DjTransitionRules;
 }
 
@@ -127,8 +130,7 @@ export function normaliseDjConfig(raw: unknown): DjSetConfig {
     transitions: {
       sheetStyle: t.sheetStyle && t.sheetStyle in SHEET_STYLES ? t.sheetStyle : d.transitions.sheetStyle,
       colour: t.colour && t.colour in TRANSITION_COLOURS ? t.colour : d.transitions.colour,
-      // Older configs allowed 16; Spotify's maximum is 8.
-      defaultBars: t.defaultBars === 4 ? 4 : 8,
+      defaultBars: t.defaultBars === 4 ? 4 : t.defaultBars === 16 ? 16 : 8,
       rules: { ...d.transitions.rules, ...t.rules },
     },
   };
@@ -242,11 +244,14 @@ export type EffectsOption = (typeof EFFECTS_OPTIONS)[number];
 export const LOOPING_OPTIONS = ['1 beat loop', '2 beat loop', '4 beat loop', '8 beat loop', '16 beat loop', 'None'] as const;
 export type LoopingOption = (typeof LOOPING_OPTIONS)[number];
 
-export const BAR_OPTIONS: TransitionBars[] = [2, 4, 8];
+export const BAR_OPTIONS: TransitionBars[] = [2, 4, 8, 16];
+
+/** Spotify offers 16 bars only for some tracks; where it does not, 8 is the fallback. */
+export const BARS_16_FALLBACK = 8;
 
 /** Clamps any stored bar value to what Spotify offers. */
 export const toBars = (n: number | null | undefined): TransitionBars | null =>
-  n == null ? null : n <= 2 ? 2 : n <= 4 ? 4 : 8;
+  n == null ? null : n <= 2 ? 2 : n <= 4 ? 4 : n <= 8 ? 8 : 16;
 
 /**
  * The values to set in Spotify for one pair. With preset Custom all five
@@ -291,7 +296,7 @@ export const TRANSITION_COLOURS: Record<TransitionColour, { label: string; about
 
 export const SHEET_STYLES: Record<SheetStyle, { label: string; about: string }> = {
   balanced: { label: 'Balanced', about: 'Bass swaps and clean crossfades; short and masked when keys clash.' },
-  smooth: { label: 'Smooth & long', about: 'Long blends (8 bars), soft crossfades, no hard cuts.' },
+  smooth: { label: 'Smooth & long', about: 'Long blends (8–16 bars), soft crossfades, no hard cuts.' },
   club: { label: 'Club cuts', about: 'Short, punchy mixes, loops on builds, hard cuts on clashes.' },
   ambient: { label: 'Ambient washes', about: 'Long smooth crossfades with filters and reverb tails.' },
 };

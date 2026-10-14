@@ -38,13 +38,13 @@ describe('extractAnswer', () => {
 });
 
 describe('parseAiAnswer', () => {
-  it('accepts valid pairs and clamps bars to 2/4/8', () => {
-    const r = parseAiAnswer(answer([entry(1), entry(0, { bars: 16 }), entry(2, { bars: 3 })]), 3);
+  it('accepts valid pairs and clamps bars to 2/4/8/16', () => {
+    const r = parseAiAnswer(answer([entry(1), entry(0, { bars: 12 }), entry(2, { bars: 3 })]), 3);
     expect(r.rejected).toEqual([]);
     expect(r.transitions.map((t) => t.index)).toEqual([0, 1, 2]);
     expect(r.transitions[0]!.settings).toEqual({
       preset: 'Custom',
-      bars: 8,
+      bars: 16,
       volume: 'Smooth crossfade',
       eq: 'Center bass swap',
       filter: 'High pass filter in',

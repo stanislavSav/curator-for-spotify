@@ -110,9 +110,9 @@ const CASES: { name: string; a: TransitionEnd; b: TransitionEnd; want: Record<Sh
     b: end(126, '9A', 0.8),
     want: {
       balanced: [8, 'Fade in cut out', 'End bass swap', 'High pass filter in', 'None', 'None'],
-      smooth: [8, 'Fade in fade out', 'End bass swap', 'High pass filter in', 'Echo ½ out end', 'None'],
+      smooth: [16, 'Fade in fade out', 'End bass swap', 'High pass filter in', 'Echo ½ out end', 'None'],
       club: [4, 'Fade in cut out', 'End bass swap', 'High pass filter in', 'None', '8 beat loop'],
-      ambient: [8, 'Smooth crossfade', '3-band fade', 'High pass filter in', 'Reverb out end', 'None'],
+      ambient: [16, 'Smooth crossfade', '3-band fade', 'High pass filter in', 'Reverb out end', 'None'],
     },
   },
   {
@@ -121,9 +121,9 @@ const CASES: { name: string; a: TransitionEnd; b: TransitionEnd; want: Record<Sh
     b: end(126, '9A'),
     want: {
       balanced: [8, 'Overlap', 'Center bass swap', 'None', 'None', 'None'],
-      smooth: [8, 'Smooth crossfade', 'Center bass swap', 'None', 'None', 'None'],
+      smooth: [16, 'Smooth crossfade', 'Center bass swap', 'None', 'None', 'None'],
       club: [4, 'Overlap', 'Center bass swap', 'None', 'None', 'None'],
-      ambient: [8, 'Smooth crossfade', '3-band fade', 'Low pass filter out', 'Reverb out end', 'None'],
+      ambient: [16, 'Smooth crossfade', '3-band fade', 'Low pass filter out', 'Reverb out end', 'None'],
     },
   },
   {
@@ -132,9 +132,9 @@ const CASES: { name: string; a: TransitionEnd; b: TransitionEnd; want: Record<Sh
     b: end(127, '10A'),
     want: {
       balanced: [8, 'Overlap', 'End bass swap', 'High pass filter in', 'None', 'None'],
-      smooth: [8, 'Smooth crossfade', 'End bass swap', 'High pass filter in', 'None', 'None'],
+      smooth: [16, 'Smooth crossfade', 'End bass swap', 'High pass filter in', 'None', 'None'],
       club: [4, 'Overlap', 'End bass swap', 'High pass filter in', 'None', 'None'],
-      ambient: [8, 'Smooth crossfade', '3-band fade', 'High pass filter in', 'Reverb out end', 'None'],
+      ambient: [16, 'Smooth crossfade', '3-band fade', 'High pass filter in', 'Reverb out end', 'None'],
     },
   },
   {
@@ -143,9 +143,9 @@ const CASES: { name: string; a: TransitionEnd; b: TransitionEnd; want: Record<Sh
     b: end(129, '8A', 0.5),
     want: {
       balanced: [8, 'Fade in fade out', 'Bass fade out', 'Low pass filter out', 'Reverb out end', 'None'],
-      smooth: [8, 'Fade in fade out', 'Bass fade out', 'Low pass filter out', 'Reverb out end', 'None'],
+      smooth: [16, 'Fade in fade out', 'Bass fade out', 'Low pass filter out', 'Reverb out end', 'None'],
       club: [4, 'Fade in fade out', 'Bass fade out', 'Low pass filter out', 'Reverb out end', 'None'],
-      ambient: [8, 'Smooth crossfade', '3-band fade', 'Low pass filter out', 'Reverb out end', 'None'],
+      ambient: [16, 'Smooth crossfade', '3-band fade', 'Low pass filter out', 'Reverb out end', 'None'],
     },
   },
   {
@@ -154,9 +154,9 @@ const CASES: { name: string; a: TransitionEnd; b: TransitionEnd; want: Record<Sh
     b: end(129, '9A'),
     want: {
       balanced: [8, 'Crossfade', 'Center bass swap', 'None', 'None', 'None'],
-      smooth: [8, 'Smooth crossfade', 'Center bass swap', 'None', 'None', 'None'],
+      smooth: [16, 'Smooth crossfade', 'Center bass swap', 'None', 'None', 'None'],
       club: [4, 'Cut in fade out', 'Quick bass cut', 'None', 'None', 'None'],
-      ambient: [8, 'Smooth crossfade', '3-band fade', 'Low pass filter out', 'Reverb out end', 'None'],
+      ambient: [16, 'Smooth crossfade', '3-band fade', 'Low pass filter out', 'Reverb out end', 'None'],
     },
   },
 ];
@@ -186,21 +186,25 @@ describe('suggestTransition: situation × Sheet Style', () => {
     expect(suggestTransition(end(124, '8A'), end(133, '8A'), prefs()).settings).toMatchObject({ bars: 4, volume: 'Fade in fast out' });
   });
 
-  it('never suggests more than 8 bars: long blends, smooth and ambient stay at 8', () => {
-    for (const sheetStyle of STYLES) {
-      expect(suggestTransition(end(124, '8A'), end(125, '8A'), prefs({ sheetStyle })).settings.bars).toBeLessThanOrEqual(8);
-    }
-    expect(suggestTransition(end(124, '8A'), end(125, '8A'), prefs()).settings.bars).toBe(8);
-    expect(suggestTransition(end(124, '8A'), end(125, '8A'), prefs({ sheetStyle: 'club' })).settings.bars).toBe(4);
+  it('suggests 16 bars (offered by Spotify for some tracks) only for same-key long blends, or in long styles', () => {
+    const bars = (b: TransitionEnd, sheetStyle: SheetStyle = 'balanced') => suggestTransition(end(124, '8A'), b, prefs({ sheetStyle })).settings.bars;
+    // Same key, +0.8 %: the longest blend.
+    expect(bars(end(125, '8A'))).toBe(16);
+    expect(bars(end(125, '8A'), 'smooth')).toBe(16);
+    expect(bars(end(125, '8A'), 'ambient')).toBe(16);
+    expect(bars(end(125, '8A'), 'club')).toBe(8);
+    // Neighbour key, +1.6 %: a long blend, but 8 bars.
+    expect(bars(end(126, '9A'))).toBe(8);
   });
 
   it('standard mix uses the default bars, scaled by the Sheet Style', () => {
-    const std = (defaultBars: 4 | 8, sheetStyle: SheetStyle) =>
+    const std = (defaultBars: 4 | 8 | 16, sheetStyle: SheetStyle) =>
       suggestTransition(end(124, '8A'), end(129, '9A'), prefs({ defaultBars, sheetStyle })).settings.bars;
     expect([std(4, 'balanced'), std(8, 'balanced')]).toEqual([4, 8]);
-    expect([std(4, 'smooth'), std(8, 'smooth')]).toEqual([8, 8]);
+    expect(std(16, 'balanced')).toBe(16);
+    expect([std(4, 'smooth'), std(8, 'smooth')]).toEqual([8, 16]);
     expect([std(4, 'club'), std(8, 'club')]).toEqual([2, 4]);
-    expect(std(4, 'ambient')).toBe(8);
+    expect(std(4, 'ambient')).toBe(16);
   });
 
   it('unknown key → Auto in every Sheet Style, with all values null', () => {
@@ -233,9 +237,10 @@ describe('suggestTransition: situation × Sheet Style', () => {
   });
 
   it('half-time pair counts as a small tempo change', () => {
+    // Same key, +1.2 % after folding: a same-key long blend (16 bars).
     const t = suggestTransition(end(170, '8A'), end(86, '8A'), prefs());
     expect(t.bpmDeltaPct).toBeCloseTo(1.2, 1);
-    expect(t.settings).toMatchObject({ volume: 'Overlap', bars: 8 });
+    expect(t.settings).toMatchObject({ volume: 'Overlap', bars: 16 });
   });
 
   it('reason is one sentence with the evidence and the intent', () => {
@@ -513,7 +518,7 @@ describe('position in the set', () => {
 });
 
 describe('every combination stays inside Spotify’s lists', () => {
-  it('values, preset shape and bars ≤ 8 for all colours, styles, track data and positions', () => {
+  it('values, preset shape and bars ≤ 16 for all colours, styles, track data and positions', () => {
     const in_ = (list: readonly string[], v: string | null) => v === null || list.includes(v);
     const data: Partial<TransitionEnd>[] = [
       {},
@@ -544,7 +549,7 @@ describe('every combination stays inside Spotify’s lists', () => {
                   seen.effects.add(s.effects!);
                   seen.looping.add(s.looping!);
                 }
-                expect(s.bars == null || s.bars <= 8).toBe(true);
+                expect(s.bars == null || s.bars <= 16).toBe(true);
                 expect(t.ai).toBeNull();
               }
     expect(n).toBeGreaterThan(2000);

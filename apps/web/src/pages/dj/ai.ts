@@ -44,9 +44,11 @@ export function aiBannerText(agent: AgentCli, summary: string, changed: number, 
 
 export const BARS_HINT = 'if Spotify offers bars';
 export const BARS_HIDDEN_NOTE = 'Spotify may show no bar choice here (no clear beat) — skip it.';
+export const BARS_16_NOTE = 'Spotify offers 16 bars only for some tracks — if it is not offered here, use 8.';
 
-/** The warning for a pair whose bars Spotify may hide, or null. */
-export const barsNote = (t: DjTransition): string | null => (t.barsMayBeHidden && t.settings.bars != null ? BARS_HIDDEN_NOTE : null);
+/** The note for a pair's bars (Spotify may hide them, or may not offer 16), or null. */
+export const barsNote = (t: DjTransition): string | null =>
+  t.settings.bars == null ? null : t.barsMayBeHidden ? BARS_HIDDEN_NOTE : t.settings.bars === 16 ? BARS_16_NOTE : null;
 
 const VOCAL_MAX = 0.3;
 const INSTRUMENTAL_MIN = 0.6;

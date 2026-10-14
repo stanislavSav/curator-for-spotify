@@ -466,21 +466,21 @@ describe('AI pass routes', () => {
     expect((await app.request('/ai-pass/unknown-job')).status).toBe(404);
   });
 
-  it('reads stored 16-bar transitions as 8 and accepts them in a new set', async () => {
+  it('reads a stored odd bar value (12) as 16, and accepts 16 bars in a new set', async () => {
     const { app, db } = setup();
     const { setId, result } = await createSet(app, db);
     const stored = JSON.parse((db.prepare('SELECT result_json FROM dj_sets WHERE id = ?').get(setId) as { result_json: string }).result_json) as DjSetResult;
     const custom = stored.transitions.findIndex((t) => t.settings.preset === 'Custom');
-    stored.transitions[custom]!.settings.bars = 16 as TransitionSettings['bars'];
+    stored.transitions[custom]!.settings.bars = 12 as TransitionSettings['bars'];
     for (const t of stored.transitions) delete (t as Partial<typeof t>).barsMayBeHidden;
     db.prepare('UPDATE dj_sets SET result_json = ? WHERE id = ?').run(JSON.stringify(stored), setId);
 
     const one = (await (await app.request(`/sets/${setId}`)).json()) as DjSetRecord;
-    expect(one.result.transitions[custom]!.settings.bars).toBe(8);
+    expect(one.result.transitions[custom]!.settings.bars).toBe(16);
     expect(one.result.transitions.every((t) => typeof t.barsMayBeHidden === 'boolean')).toBe(true);
 
     const old = structuredClone(result);
-    old.transitions[custom]!.suggested.bars = 16 as TransitionSettings['bars'];
+    old.transitions[custom]!.suggested.bars = 16;
     const cfg = { ...poolCfg(6), transitions: { ...poolCfg(6).transitions, defaultBars: 16 } };
     const res = await app.request('/sets', post({ name: 'Old bars', config: cfg, result: old }));
     expect(res.status).toBe(202);
