@@ -1,6 +1,6 @@
 # 005 — Public release on GitHub
 
-**Status:** done locally (2026-10-14); waiting for the owner's go to publish
+**Status:** done (2026-10-14). Published at github.com/stanislavSav/spotify-curator; CI green; pull requests disabled.
 **Started:** 2026-10-14
 **Inputs:** `tasks/decisions-log.md`, `research/agent-harness-formats.md`, ADR 0003.
 
