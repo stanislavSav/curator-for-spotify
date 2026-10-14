@@ -11,7 +11,10 @@ import {
   toBars,
   normaliseDjConfig,
   type DjCreateRequest,
+  type DjDraftRequest,
+  type DjDraftUpdate,
   type DjPreviewRequest,
+  type DjTemplateInput,
   type DjSheetRequest,
   type DjSetConfig,
   type DjSetResult,
@@ -168,11 +171,35 @@ export const djSheetSchema = z.object({
   config: incomingConfig,
 }) satisfies z.ZodType<DjSheetRequest>;
 
+const setName = z.string().trim().min(1, 'Give the set a name').max(100);
+
 export const djCreateSchema = z.object({
-  name: z.string().trim().min(1, 'Give the set a name').max(100),
+  name: setName,
   config: incomingConfig,
   result: djSetResultSchema,
 }) satisfies z.ZodType<DjCreateRequest>;
+
+/** POST /api/dj/drafts: the same body as a create. */
+export const djDraftSchema = djCreateSchema satisfies z.ZodType<DjDraftRequest>;
+
+/** PUT /api/dj/sets/:id: rename a draft, or replace its tracks and sheet. */
+export const djDraftUpdateSchema = z
+  .object({ name: setName.optional(), config: incomingConfig.optional(), result: djSetResultSchema.optional() })
+  .refine((u) => u.name !== undefined || u.config !== undefined || u.result !== undefined, 'Send name, config, result or a mix') satisfies z.ZodType<DjDraftUpdate>;
+
+const templateFields = {
+  name: z.string().trim().min(1, 'Give the template a name').max(60),
+  includePool: z.boolean(),
+  config: incomingConfig,
+};
+
+export const djTemplateInputSchema = z.object(templateFields) satisfies z.ZodType<DjTemplateInput>;
+
+/** PATCH /api/dj/templates/:id: any subset of the input. */
+export const djTemplatePatchSchema = z
+  .object(templateFields)
+  .partial()
+  .refine((p) => Object.values(p).some((v) => v !== undefined), 'Send name, includePool, config or a mix') satisfies z.ZodType<Partial<DjTemplateInput>>;
 
 export const djTransitionPatchSchema = z
   .object({ settings: transitionSettingsSchema.optional(), applied: z.boolean().optional() })

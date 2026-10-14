@@ -173,7 +173,19 @@ CREATE TABLE IF NOT EXISTS dj_sets (
   config_json TEXT NOT NULL,
   result_json TEXT NOT NULL,
   spotify_playlist_id TEXT,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'created',   -- draft | created
+  updated_at TEXT
+);
+
+-- user Set Templates (features/dj)
+CREATE TABLE IF NOT EXISTS dj_templates (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  include_pool INTEGER NOT NULL,
+  config_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
 -- jobs (jobs/jobs.ts)
@@ -196,7 +208,21 @@ export function openDb(file = resolve(DATA_DIR, 'curator.sqlite')): DB {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
+  migrate(db);
   return db;
+}
+
+/** Columns added after a table first shipped; CREATE TABLE IF NOT EXISTS does not add them. */
+const ADDED_COLUMNS: { table: string; column: string; ddl: string }[] = [
+  { table: 'dj_sets', column: 'status', ddl: "TEXT NOT NULL DEFAULT 'created'" },
+  { table: 'dj_sets', column: 'updated_at', ddl: 'TEXT' },
+];
+
+function migrate(db: DB) {
+  for (const { table, column, ddl } of ADDED_COLUMNS) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
 }
 
 let shared: DB | null = null;

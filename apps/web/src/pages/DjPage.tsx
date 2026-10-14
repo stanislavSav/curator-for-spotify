@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   normaliseDjConfig,
   type DjCreateRequest,
+  type DjDraftRequest,
+  type DjDraftUpdate,
   type DjPoolOptions,
   type DjSetConfig,
   type DjSetRecord,
@@ -18,16 +20,19 @@ import { AiPassBanner, AiPassButton, Spinner } from './dj/AiPass.tsx';
 import { HowToApply, SheetExportButtons } from './dj/ApplyPanel.tsx';
 import { ApplyMode } from './dj/ApplyMode.tsx';
 import { ConfigPanel } from './dj/ConfigPanel.tsx';
+import { DraftHeader } from './dj/DraftHeader.tsx';
+import { EarlierSets } from './dj/EarlierSets.tsx';
 import { appliedCount, editResult } from './dj/edits.ts';
 import { useAiPass, useDjSet, useLivePreview, useNow, type AiTarget } from './dj/hooks.ts';
 import { SetChart } from './dj/SetChart.tsx';
 import { fmtDuration } from './dj/sheet.ts';
+import { isDraft, suggestSetName, uniqueName } from './dj/saved.ts';
 import { rebuiltAgo } from './dj/summaries.ts';
 import { loadConfig, saveConfig } from './dj/templates.ts';
+import { TemplatesRow } from './dj/TemplatesRow.tsx';
 import { AppliedProgress, TrackList, TransitionSheet } from './dj/TransitionSheet.tsx';
 
 const randomSeed = () => Math.floor(Math.random() * 2 ** 31);
-const today = () => new Date().toISOString().slice(0, 10);
 const toggleIn = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 
 // Owned by the dj feature.
@@ -88,23 +93,67 @@ export function DjPage() {
     );
   };
 
+  /** The builder's set came from this draft ("Use these settings"), so it can update it. */
+  const [fromDraft, setFromDraft] = useState<{ id: string; name: string } | null>(null);
+  const [justCreated, setJustCreated] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState<string | null>(null);
+
+  /** Create on Spotify: the builder's set (a request) or a saved draft (its id). */
   const create = useMutation({
-    mutationFn: (req: DjCreateRequest) => api<{ job: Job; setId: string }>('/api/dj/sets', { method: 'POST', json: req }),
+    mutationFn: (arg: { req: DjCreateRequest } | { draftId: string }) =>
+      'req' in arg
+        ? api<{ job: Job; setId: string }>('/api/dj/sets', { method: 'POST', json: arg.req })
+        : api<{ job: Job; setId: string }>(`/api/dj/sets/${arg.draftId}/create`, { method: 'POST' }),
   });
+  const createdDraftId = create.variables && 'draftId' in create.variables ? create.variables.draftId : null;
   const job = useJob(create.data?.job.id ?? null);
   const jobDone = job.data?.status === 'done';
   const creating = create.isPending || job.data?.status === 'running';
-  const [justCreated, setJustCreated] = useState<string | null>(null);
   useEffect(() => {
     if (!jobDone || !create.data) return;
+    const id = create.data.setId;
     void qc.invalidateQueries({ queryKey: ['dj', 'sets'] });
-    setJustCreated(create.data.setId);
-    view(create.data.setId);
+    void qc.invalidateQueries({ queryKey: ['dj', 'set', id] });
+    if (createdDraftId) void qc.invalidateQueries({ queryKey: ['dj', 'set', createdDraftId] });
+    setFromDraft((d) => (d && (d.id === id || d.id === createdDraftId) ? null : d));
+    setJustCreated(id);
+    view(id);
   }, [jobDone, create.data?.setId]);
   // A new preview is a new set: allow creating it.
   useEffect(() => {
     if (!creating) create.reset();
   }, [built?.at]);
+
+  const showRecord = (r: DjSetRecord) => {
+    qc.setQueryData(['dj', 'set', r.id], r);
+    void qc.invalidateQueries({ queryKey: ['dj', 'sets'] });
+  };
+  const saveDraft = useMutation({
+    mutationFn: (req: DjDraftRequest) => api<DjSetRecord>('/api/dj/drafts', { method: 'POST', json: req }),
+    onSuccess: (r) => {
+      showRecord(r);
+      setFromDraft({ id: r.id, name: r.name });
+      setJustSaved(r.id);
+      view(r.id);
+    },
+  });
+  const putDraft = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: DjDraftUpdate }) =>
+      api<DjSetRecord>(`/api/dj/sets/${id}`, { method: 'PUT', json: body }),
+    onSuccess: (r) => {
+      showRecord(r);
+      setFromDraft((d) => (d?.id === r.id ? { id: r.id, name: r.name } : d));
+    },
+  });
+  const deleteSet = useMutation({
+    mutationFn: (id: string) => api<void>(`/api/dj/sets/${id}`, { method: 'DELETE' }),
+    onSuccess: (_v, id) => {
+      if (viewingId === id) view(null);
+      setFromDraft((d) => (d?.id === id ? null : d));
+      void qc.invalidateQueries({ queryKey: ['dj', 'sets'] });
+    },
+  });
+  const takenNames = history.data?.map((s) => s.name) ?? [];
 
   // While the sheet is being recomputed, the shown values may be about to change.
   const stale = live.sheetPending;
@@ -114,6 +163,14 @@ export function DjPage() {
     live.rebuild();
   };
   const record = viewingId ? saved.record : undefined;
+
+  /** "Use these settings": a saved set's settings and seed, and its edits on pairs that remain. */
+  const takeSettingsOf = (r: DjSetRecord) => {
+    setFromDraft(isDraft(r) ? { id: r.id, name: r.name } : null);
+    setSeed(r.result.seed);
+    setConfig(normaliseDjConfig(r.config));
+    live.rebuild(r.result);
+  };
 
   const footer = (
     <div className="space-y-2">
@@ -177,8 +234,8 @@ export function DjPage() {
         <h1 className="text-2xl font-semibold">DJ Set</h1>
         <p className="mt-1 max-w-3xl text-sm text-zinc-400">
           Build a playlist ordered for smooth transitions by BPM, Camelot key and an Energy Curve. Choose a Pool on the
-          left and press Rebuild set after a change; Sheet Style and Colour update the sheet at once. Check the Transition Sheet, create the playlist on Spotify,
-          then set each transition in Spotify › Mix and tick it here.
+          left and press Rebuild set after a change; Sheet Style and Colour update the sheet at once. Check the Transition Sheet, create the playlist on Spotify
+          (or save a draft to finish later), then set each transition in Spotify › Mix and tick it here.
         </p>
       </div>
 
@@ -187,7 +244,7 @@ export function DjPage() {
           <ConfigPanel
             config={config}
             onChange={setConfig}
-            onApplyTemplate={setConfigAndRebuild}
+            templates={<TemplatesRow config={config} usable={built?.result.pool.usable ?? null} onApply={setConfigAndRebuild} />}
             options={options.data}
             usable={built?.result.pool.usable ?? null}
             footer={footer}
@@ -208,7 +265,24 @@ export function DjPage() {
                 onUpdate={saved.update}
                 onApply={() => setApplyOpen(true)}
                 onClose={() => view(null)}
-                onUseSettings={() => setConfigAndRebuild(normaliseDjConfig(record.config))}
+                onUseSettings={() => takeSettingsOf(record)}
+                draftHeader={
+                  isDraft(record) && (
+                    <DraftHeader
+                      key={record.id}
+                      record={record}
+                      justSaved={justSaved === record.id}
+                      onCreate={() => create.mutate({ draftId: record.id })}
+                      creating={creating && createdDraftId === record.id}
+                      createError={createdDraftId === record.id ? create.error : null}
+                      job={createdDraftId === record.id ? job.data : undefined}
+                      onRename={(name) => putDraft.mutateAsync({ id: record.id, body: { name } })}
+                      onDelete={() => deleteSet.mutateAsync(record.id)}
+                      onUseSettings={() => takeSettingsOf(record)}
+                      onClose={() => view(null)}
+                    />
+                  )
+                }
                 error={saved.error}
                 aiButton={
                   <AiPassButton
@@ -289,10 +363,27 @@ export function DjPage() {
               <CreatePanel
                 disabled={built.result.tracks.length === 0 || stale || live.pending}
                 busy={live.pending || stale}
-                onCreate={(name) => create.mutate({ name, config: built.config, result: built.result })}
-                running={creating}
-                error={create.error}
-                job={job.data}
+                suggestedName={fromDraft ? uniqueName(fromDraft.name, takenNames) : suggestSetName(takenNames, new Date())}
+                onCreate={(name) => create.mutate({ req: { name, config: built.config, result: built.result } })}
+                running={creating && !createdDraftId}
+                error={createdDraftId ? null : create.error}
+                job={createdDraftId ? undefined : job.data}
+                onSaveDraft={(name) => saveDraft.mutate({ name, config: built.config, result: built.result })}
+                savingDraft={saveDraft.isPending}
+                fromDraft={fromDraft}
+                onUpdateDraft={(id) =>
+                  putDraft.mutate(
+                    { id, body: { config: built.config, result: built.result } },
+                    {
+                      onSuccess: (r) => {
+                        setJustSaved(null);
+                        view(r.id);
+                      },
+                    },
+                  )
+                }
+                updatingDraft={putDraft.isPending}
+                draftError={saveDraft.error ?? putDraft.error}
               />
               {applyOpen && (
                 <ApplyMode result={built.result} maxBpmStepPct={built.config.maxBpmStepPct} spotifyUrl={null} onClose={() => setApplyOpen(false)} />
@@ -318,46 +409,18 @@ export function DjPage() {
               result={record.result}
               maxBpmStepPct={normaliseDjConfig(record.config).maxBpmStepPct}
               spotifyUrl={record.spotifyUrl}
-              onApplied={(i, v) => saved.update(i, { applied: v })}
+              onApplied={isDraft(record) ? undefined : (i, v) => saved.update(i, { applied: v })}
               onClose={() => setApplyOpen(false)}
             />
           )}
 
-          <Card title="Earlier sets">
-            <ErrorNote error={history.error} />
-            {history.data?.length ? (
-              <ul className="divide-y divide-zinc-800 text-sm">
-                {history.data.map((s) => {
-                  const pairs = Math.max(0, s.tracks - 1);
-                  return (
-                    <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{s.name}</div>
-                        <div className="text-xs text-zinc-500">
-                          {s.createdAt.slice(0, 10)} · {s.tracks} tracks · {fmtDuration(s.durationMs)} · score {s.score} ·{' '}
-                          <span className={s.applied >= pairs && pairs > 0 ? 'text-brand' : undefined}>
-                            {s.applied ?? 0}/{pairs} applied
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {s.spotifyUrl && (
-                          <a href={s.spotifyUrl} target="_blank" rel="noreferrer" className="rounded-full px-3 py-1 text-sm text-brand hover:bg-zinc-800">
-                            Open in Spotify
-                          </a>
-                        )}
-                        <Button variant={viewingId === s.id ? 'secondary' : 'ghost'} onClick={() => view(s.id)}>
-                          {(s.applied ?? 0) < pairs ? 'Continue applying' : 'View sheet'}
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-sm text-zinc-500">Sets you create on Spotify appear here with their Transition Sheet.</p>
-            )}
-          </Card>
+          <EarlierSets
+            sets={history.data}
+            error={history.error}
+            viewingId={viewingId}
+            onView={view}
+            onDelete={(id) => deleteSet.mutateAsync(id)}
+          />
         </div>
       </div>
     </div>
@@ -443,26 +506,45 @@ function ResultSummary({ result }: { result: DjSetResult }) {
 function CreatePanel({
   disabled,
   busy,
+  suggestedName,
   onCreate,
   running,
   error,
   job,
+  onSaveDraft,
+  savingDraft,
+  fromDraft,
+  onUpdateDraft,
+  updatingDraft,
+  draftError,
 }: {
   disabled: boolean;
   busy: boolean;
+  suggestedName: string;
   onCreate: (name: string) => void;
   running: boolean;
   error: unknown;
   job: Job | undefined;
+  onSaveDraft: (name: string) => void;
+  savingDraft: boolean;
+  fromDraft: { id: string; name: string } | null;
+  onUpdateDraft: (id: string) => void;
+  updatingDraft: boolean;
+  draftError: unknown;
 }) {
-  const [name, setName] = useState(`DJ Set ${today()}`);
-  const [asking, setAsking] = useState(false);
+  const [name, setName] = useState(suggestedName);
+  const [asking, setAsking] = useState<'create' | 'draft' | null>(null);
+  const ask = (mode: 'create' | 'draft') => {
+    setName(suggestedName);
+    setAsking(mode);
+  };
+  const working = running || savingDraft || updatingDraft;
 
   return (
     <Card title="Create on Spotify">
       <p className="mb-3 text-sm text-zinc-400">
         This makes a new private playlist in this order, with this Transition Sheet and your edits. It does not change
-        any existing playlist.
+        any existing playlist. Save draft keeps the set in this app only, to finish later.
         {busy && ' Wait for the rebuild to finish.'}
       </p>
       {asking ? (
@@ -470,7 +552,10 @@ function CreatePanel({
           className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (name.trim()) onCreate(name.trim());
+            const n = name.trim();
+            if (!n) return;
+            if (asking === 'create') onCreate(n);
+            else onSaveDraft(n);
           }}
         >
           <input
@@ -478,23 +563,39 @@ function CreatePanel({
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
-            aria-label="Playlist name"
+            aria-label={asking === 'create' ? 'Playlist name' : 'Draft name'}
             className="min-w-60 flex-1 rounded bg-zinc-800 px-3 py-1.5 text-sm"
           />
-          <Button variant="primary" type="submit" disabled={disabled || running || !name.trim()}>
-            {running ? 'Creating…' : 'Create playlist'}
+          <Button variant="primary" type="submit" disabled={disabled || working || !name.trim()}>
+            {asking === 'create' ? (running ? 'Creating…' : 'Create playlist') : savingDraft ? 'Saving…' : 'Save draft'}
           </Button>
-          <Button variant="ghost" type="button" onClick={() => setAsking(false)} disabled={running}>
+          <Button variant="ghost" type="button" onClick={() => setAsking(null)} disabled={working}>
             Cancel
           </Button>
         </form>
       ) : (
-        <Button variant="primary" disabled={disabled} onClick={() => setAsking(true)}>
-          Create on Spotify
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="primary" disabled={disabled} onClick={() => ask('create')}>
+            Create on Spotify
+          </Button>
+          <Button disabled={disabled} onClick={() => ask('draft')} title="Keep this set in the app without creating it on Spotify">
+            Save draft
+          </Button>
+          {fromDraft && (
+            <Button
+              variant="secondary"
+              disabled={disabled || working}
+              onClick={() => onUpdateDraft(fromDraft.id)}
+              title={`Replace the tracks and sheet of the draft “${fromDraft.name}” with this set`}
+            >
+              {updatingDraft ? 'Updating…' : `Update draft “${fromDraft.name}”`}
+            </Button>
+          )}
+        </div>
       )}
       <div className="mt-3 space-y-2">
         <ErrorNote error={error} />
+        <ErrorNote error={draftError} />
         <JobProgress job={job} />
       </div>
     </Card>
@@ -508,6 +609,7 @@ function SavedSetView({
   onApply,
   onClose,
   onUseSettings,
+  draftHeader,
   error,
   aiButton,
   aiBanner,
@@ -518,56 +620,61 @@ function SavedSetView({
   onApply: () => void;
   onClose: () => void;
   onUseSettings: () => void;
+  /** Set for drafts: replaces the created set's header. */
+  draftHeader: ReactNode;
   error: unknown;
   aiButton: ReactNode;
   aiBanner: ReactNode;
 }) {
   const config = normaliseDjConfig(record.config);
   const total = record.result.transitions.length;
+  const draft = isDraft(record);
   return (
     <>
-      <Card
-        title={record.name}
-        actions={
-          <>
-            <Button variant="ghost" onClick={onUseSettings} title="Copy this set's settings into the panel on the left">
-              Use these settings
-            </Button>
-            <Button onClick={onClose}>Back to builder</Button>
-          </>
-        }
-      >
-        <p className="mb-3 text-sm text-zinc-400">
-          {justCreated ? `“${record.name}” is a new private playlist with ${record.tracks} tracks. ` : `Created ${record.createdAt.slice(0, 10)}. `}
-          Set each transition in Spotify, then tick it below. Your ticks and edits are saved here; the app never
-          changes the playlist on Spotify.{' '}
-          {record.spotifyUrl && (
-            <a href={record.spotifyUrl} target="_blank" rel="noreferrer" className="text-brand underline">
-              Open it in Spotify
-            </a>
-          )}
-        </p>
-        <details open={justCreated}>
-          <summary className="cursor-pointer text-sm text-zinc-300">How to apply in Spotify</summary>
-          <div className="mt-2">
-            <HowToApply url={record.spotifyUrl} />
-          </div>
-        </details>
-      </Card>
+      {draftHeader || (
+        <Card
+          title={record.name}
+          actions={
+            <>
+              <Button variant="ghost" onClick={onUseSettings} title="Copy this set's settings into the panel on the left">
+                Use these settings
+              </Button>
+              <Button onClick={onClose}>Back to builder</Button>
+            </>
+          }
+        >
+          <p className="mb-3 text-sm text-zinc-400">
+            {justCreated ? `“${record.name}” is a new private playlist with ${record.tracks} tracks. ` : `Created ${record.createdAt.slice(0, 10)}. `}
+            Set each transition in Spotify, then tick it below. Your ticks and edits are saved here; the app never
+            changes the playlist on Spotify.{' '}
+            {record.spotifyUrl && (
+              <a href={record.spotifyUrl} target="_blank" rel="noreferrer" className="text-brand underline">
+                Open it in Spotify
+              </a>
+            )}
+          </p>
+          <details open={justCreated}>
+            <summary className="cursor-pointer text-sm text-zinc-300">How to apply in Spotify</summary>
+            <div className="mt-2">
+              <HowToApply url={record.spotifyUrl} />
+            </div>
+          </details>
+        </Card>
+      )}
       <ErrorNote error={error} />
       <Card
         title={
           <span className="flex flex-wrap items-center gap-3">
-            Transition Sheet <AppliedProgress done={appliedCount(record.result)} total={total} />
+            Transition Sheet {!draft && <AppliedProgress done={appliedCount(record.result)} total={total} />}
           </span>
         }
         actions={
           <>
             {aiButton}
-            <Button variant="primary" onClick={onApply} disabled={total === 0} title="One transition at a time, full screen">
+            <Button variant={draft ? 'ghost' : 'primary'} onClick={onApply} disabled={total === 0} title="One transition at a time, full screen">
               Apply mode
             </Button>
-            <SheetExportButtons result={record.result} name={record.name} applied />
+            <SheetExportButtons result={record.result} name={record.name} applied={!draft} />
           </>
         }
       >
@@ -577,7 +684,7 @@ function SavedSetView({
           maxBpmStepPct={config.maxBpmStepPct}
           defaultBars={config.transitions.defaultBars}
           onEdit={(i, s) => onUpdate(i, { settings: s })}
-          onApplied={(i, v) => onUpdate(i, { applied: v })}
+          onApplied={draft ? undefined : (i, v) => onUpdate(i, { applied: v })}
         />
       </Card>
       <ResultSummary result={record.result} />

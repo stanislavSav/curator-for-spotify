@@ -17,7 +17,9 @@ Everything runs on your machine. Your library stays in a local SQLite file.
 | 1 | **Analyse** | Syncs Liked Songs, your own playlists, top tracks/artists and recent plays. Adds BPM, key and energy from [ReccoBeats](https://reccobeats.com) and [Deezer](https://developers.deezer.com), and genre tags from [MusicBrainz](https://musicbrainz.org) and [Wikidata](https://www.wikidata.org). |
 | 2 | **Propose** | Your AI agent reads a compact Snapshot of your library and writes named playlist proposals with reasons. No agent? Press **Generate basic proposals**. You approve, edit or drop each one; the app creates the approved ones on Spotify. |
 | 3 | **Prune** | Finds playlists with no recent use, based on your Streaming History export, plays of tracks that only that playlist has, and edit dates. You confirm each one. A backup is saved first and can be restored from the app; Spotify also keeps deleted playlists recoverable for 90 days. |
-| 4 | **DJ Set** | Picks tracks from a pool and orders them by BPM, Camelot key and an energy curve you choose, then creates the playlist. The set rebuilds live as you change settings. A **Transition Sheet** card per pair mirrors Spotify's *Edit transition* panel: preset, bars, and the exact Volume / EQ / Filter / Effects / Looping values to pick. Suggestions come from a rule engine that uses key, tempo, energy, vocals/instrumental, acousticness and position in the set, with a **Colour** setting (subtle / medium / bold). Press **✦ AI pass** to have your own AI agent review the sheet. You can edit each card, tick it off as applied, and step through them in a full-screen Apply mode. |
+| 4 | **DJ Set** | Picks tracks from a pool and orders them by BPM, Camelot key and an energy curve you choose, then creates the playlist. The set rebuilds live as you change settings. A **Transition Sheet** card per pair mirrors Spotify's *Edit transition* panel: preset, bars, and the exact Volume / EQ / Filter / Effects / Looping values to pick. Suggestions come from a rule engine that uses key, tempo, energy, vocals/instrumental, acousticness and position in the set, with a **Colour** setting (subtle / medium / bold). Press **✦ AI pass** to have your own AI agent review the sheet. You can edit each card, tick it off as applied, and step through them in a full-screen Apply mode. Save your own **Set Templates**, and keep sets as **drafts** before creating them on Spotify. |
+
+| 5 | **Full Backup** | Download one file with your templates, DJ Sets (drafts included), Proposal decisions, playlist backups and settings, optionally with the synced library and enrichment cache. Import it on another device; conflicts are shown first, and you choose for each one. Spotify login tokens are never included. |
 
 ## Before you start
 
@@ -124,6 +126,7 @@ Spotify Web API ──sync──▶ SQLite (data/curator.sqlite) ◀──enrich
   | Wikidata | Spotify artist IDs |
 
 - Your AI agent reads `data/snapshot.json` on your machine. The **✦ AI pass** on the DJ page runs your installed agent CLI (Claude Code, Codex or Gemini CLI) with the set's track names, artists and audio features as text, without tools. What your agent's provider does with that data depends on the agent you use.
+- A **Full Backup** file holds your library data (tracks, playlists, listening history if imported). Keep it private. It never contains Spotify login tokens, and git ignores files named `spotify-curator-backup*.json`.
 - `npm run check:public` and a pre-commit hook block commits of `data/`, `.env`, snapshots, proposals, databases and likely secrets. Put your own names, emails or playlist names in `.private-markers` (git-ignored) to block those too.
 
 ## Commands

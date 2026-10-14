@@ -107,8 +107,16 @@ A one-click review of a DJ Set's Transition Sheet by the user's own Agent, run b
 _Avoid_: auto mix, AI mode
 
 **Set Template**:
-A saved starting point for a DJ Set's settings (for example "Friday warm-up").
+A saved starting point for a DJ Set's settings (for example "Friday warm-up"). Built-in, or saved by the user, with or without the Pool.
 _Avoid_: preset
+
+**Draft**:
+A DJ Set saved in the tool but not yet created on Spotify.
+_Avoid_: unsaved set, local playlist
+
+**Full Backup**:
+One file with all of the user's work (templates, DJ Sets, Proposal decisions, Backups, settings), and optionally the library cache, used to move the tool to another device. It never holds Spotify login tokens.
+_Avoid_: export, archive (and do not confuse with a Backup, which is one playlist saved before pruning)
 
 **Transition Sheet**:
 The tool's per-pair list of suggested Transitions for a DJ Set. The user applies it by hand in the Spotify Mix editor.

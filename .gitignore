@@ -22,3 +22,7 @@ my_spotify_data*
 Spotify Account Data/
 Spotify Extended Streaming History/
 coverage/
+
+# Full Backup files contain personal library data
+spotify-curator-backup*.json*
+*.curator-backup.json*

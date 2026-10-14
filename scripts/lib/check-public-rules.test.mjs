@@ -31,6 +31,21 @@ test('blocks private paths', () => {
   }
 });
 
+test('blocks Full Backup files anywhere', () => {
+  for (const p of [
+    'spotify-curator-backup-2026-10-14.json',
+    'Downloads/spotify-curator-backup-2026-10-14 (1).json',
+    'docs/spotify-curator-backup.json.gz',
+    'old/laptop.curator-backup.json',
+    'x.curator-backup.json.gz',
+  ]) {
+    assert.match(checkPath(p) ?? '', /Full Backup/, `expected ${p} to be blocked as a Full Backup`);
+  }
+  for (const p of ['apps/server/src/features/backup/service.ts', 'packages/shared/src/backup.ts', 'curator-backup.md']) {
+    assert.equal(checkPath(p), null, `expected ${p} to be allowed`);
+  }
+});
+
 test('allows normal and intentional paths', () => {
   for (const p of [
     'data/.gitkeep',

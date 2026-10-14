@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { DEFAULT_DJ_CONFIG, type AgentCli, type AiPassAgents, type AiPassResult } from '@curator/shared';
 import { getDb, type DB } from '../../db/db.ts';
+import { DEMO_MESSAGE, isDemo } from '../../demo/guard.ts';
 import { getLibraryTracks } from '../../db/library.ts';
 import { getJob, latestJob, startJob } from '../../jobs/jobs.ts';
 import { spotify, type SpotifyClient } from '../../spotify/client.ts';
@@ -11,8 +12,29 @@ import { buildCandidates, poolOptions } from './pool.ts';
 import { AGENT_LABEL, detectAgents, runAgentCli } from './ai-pass/agents.ts';
 import type { AiPassInput } from './ai-pass/prompt.ts';
 import { applyAiToSet, runAiPass, type RunAgent } from './ai-pass/run.ts';
-import { aiPassRequestSchema, djCreateSchema, djPreviewSchema, djSheetSchema, djTransitionPatchSchema } from './schema.ts';
-import { createDjSet, getDjSet, listDjSets, patchDjTransition, sheetFor } from './sets.ts';
+import {
+  aiPassRequestSchema,
+  djCreateSchema,
+  djDraftSchema,
+  djDraftUpdateSchema,
+  djPreviewSchema,
+  djSheetSchema,
+  djTemplateInputSchema,
+  djTemplatePatchSchema,
+  djTransitionPatchSchema,
+} from './schema.ts';
+import {
+  createDjDraftOnSpotify,
+  createDjSet,
+  deleteDjSet,
+  getDjSet,
+  listDjSets,
+  patchDjTransition,
+  saveDjDraft,
+  sheetFor,
+  updateDjDraft,
+} from './sets.ts';
+import { createTemplate, deleteTemplate, listTemplates, TemplateNameTakenError, updateTemplate } from './templates.ts';
 
 interface Deps {
   db: () => DB;
@@ -21,6 +43,10 @@ interface Deps {
   agents?: () => AiPassAgents;
   runAgent?: RunAgent;
 }
+
+export const CREATING_MESSAGE = 'A DJ Set is being created already. Wait for it to finish.';
+export const CREATED_SET_MESSAGE = "Created sets can't be replaced; save a new draft.";
+export const DRAFT_BUSY_MESSAGE = 'This draft is being created on Spotify. Wait for it to finish.';
 
 export const NO_AGENT_MESSAGE = 'No agent CLI found. Install Claude Code, Codex or Gemini CLI and log in, or set AGENT_CLI.';
 
@@ -37,6 +63,9 @@ export function makeDjRoutes(deps: Deps) {
   const runAgent = deps.runAgent ?? realRunAgent;
   // AI pass results live in memory: they are only needed while the page watches the job.
   const aiResults = new Map<string, AiPassResult>();
+  // The draft whose create job runs now; it may not change or go away meanwhile.
+  let creatingDraftId: string | null = null;
+  const createRunning = (db: DB) => latestJob('create-dj-set', db)?.status === 'running';
 
   return new Hono()
     .get('/pool-options', (c) => {
@@ -59,9 +88,7 @@ export function makeDjRoutes(deps: Deps) {
       const p = await parse(djCreateSchema, c.req);
       if ('error' in p) return c.json({ error: p.error }, 400);
       const db = deps.db();
-      if (latestJob('create-dj-set', db)?.status === 'running') {
-        return c.json({ error: 'A DJ Set is being created already. Wait for it to finish.' }, 409);
-      }
+      if (createRunning(db)) return c.json({ error: CREATING_MESSAGE }, 409);
       const id = randomUUID();
       const req = p.data;
       const job = startJob(
@@ -79,6 +106,75 @@ export function makeDjRoutes(deps: Deps) {
       const set = getDjSet(deps.db(), c.req.param('id'));
       return set ? c.json(set) : c.json({ error: 'DJ Set not found' }, 404);
     })
+    .post('/drafts', async (c) => {
+      const p = await parse(djDraftSchema, c.req);
+      if ('error' in p) return c.json({ error: p.error }, 400);
+      return c.json(saveDjDraft(deps.db(), randomUUID(), p.data), 201);
+    })
+    .put('/sets/:id', async (c) => {
+      const p = await parse(djDraftUpdateSchema, c.req);
+      if ('error' in p) return c.json({ error: p.error }, 400);
+      const db = deps.db();
+      const id = c.req.param('id');
+      const set = getDjSet(db, id);
+      if (!set) return c.json({ error: 'DJ Set not found' }, 404);
+      if (set.status === 'created') return c.json({ error: CREATED_SET_MESSAGE }, 409);
+      if (creatingDraftId === id) return c.json({ error: DRAFT_BUSY_MESSAGE }, 409);
+      return c.json(updateDjDraft(db, id, p.data));
+    })
+    .post('/sets/:id/create', (c) => {
+      // The demo guard only blocks POST /api/dj/sets; this path writes to Spotify too.
+      if (isDemo()) return c.json({ error: DEMO_MESSAGE, code: 'demo' }, 403);
+      const db = deps.db();
+      const draft = getDjSet(db, c.req.param('id'));
+      if (!draft) return c.json({ error: 'DJ Set not found' }, 404);
+      if (draft.status === 'created') return c.json({ error: 'This set is on Spotify already.' }, 409);
+      if (createRunning(db)) return c.json({ error: CREATING_MESSAGE }, 409);
+      creatingDraftId = draft.id;
+      const job = startJob(
+        'create-dj-set',
+        async (ctx) => {
+          try {
+            await createDjDraftOnSpotify(db, deps.client(), draft, ctx.progress);
+            return `Created “${draft.name}” with ${draft.result.tracks.length} tracks.`;
+          } finally {
+            creatingDraftId = null;
+          }
+        },
+        db,
+      );
+      return c.json({ job, setId: draft.id }, 202);
+    })
+    .delete('/sets/:id', (c) => {
+      const id = c.req.param('id');
+      if (creatingDraftId === id) return c.json({ error: DRAFT_BUSY_MESSAGE }, 409);
+      return deleteDjSet(deps.db(), id) ? c.body(null, 204) : c.json({ error: 'DJ Set not found' }, 404);
+    })
+    .get('/templates', (c) => c.json(listTemplates(deps.db())))
+    .post('/templates', async (c) => {
+      const p = await parse(djTemplateInputSchema, c.req);
+      if ('error' in p) return c.json({ error: p.error }, 400);
+      try {
+        return c.json(createTemplate(deps.db(), p.data), 201);
+      } catch (err) {
+        if (err instanceof TemplateNameTakenError) return c.json({ error: err.message }, 409);
+        throw err;
+      }
+    })
+    .patch('/templates/:id', async (c) => {
+      const p = await parse(djTemplatePatchSchema, c.req);
+      if ('error' in p) return c.json({ error: p.error }, 400);
+      try {
+        const template = updateTemplate(deps.db(), c.req.param('id'), p.data);
+        return template ? c.json(template) : c.json({ error: 'Template not found' }, 404);
+      } catch (err) {
+        if (err instanceof TemplateNameTakenError) return c.json({ error: err.message }, 409);
+        throw err;
+      }
+    })
+    .delete('/templates/:id', (c) =>
+      deleteTemplate(deps.db(), c.req.param('id')) ? c.body(null, 204) : c.json({ error: 'Template not found' }, 404),
+    )
     .patch('/sets/:id/transitions/:index', async (c) => {
       const p = await parse(djTransitionPatchSchema, c.req);
       if ('error' in p) return c.json({ error: p.error }, 400);

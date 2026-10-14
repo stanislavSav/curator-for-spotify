@@ -6,3 +6,4 @@ export * from './library.ts';
 export * from './prune.ts';
 export * from './dj.ts';
 export * from './proposals.ts';
+export * from './backup.ts';

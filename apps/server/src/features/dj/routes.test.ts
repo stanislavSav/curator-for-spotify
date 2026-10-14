@@ -8,14 +8,17 @@ import {
   type DjSetRecord,
   type DjSetResult,
   type DjSetSummary,
+  type DjTemplate,
   type Job,
   type TransitionSettings,
 } from '@curator/shared';
+import { config as appConfig } from '../../config.ts';
 import { openDb, type DB } from '../../db/db.ts';
+import { DEMO_MESSAGE, isBlockedInDemo } from '../../demo/guard.ts';
 import { getJob } from '../../jobs/jobs.ts';
 import { SpotifyClient } from '../../spotify/client.ts';
 import type { RunAgent } from './ai-pass/run.ts';
-import { makeDjRoutes, NO_AGENT_MESSAGE } from './routes.ts';
+import { CREATED_SET_MESSAGE, makeDjRoutes, NO_AGENT_MESSAGE } from './routes.ts';
 import { config, seedLibrary } from './test-helpers.ts';
 
 function setup(ai: { agents?: () => AiPassAgents; runAgent?: RunAgent } = {}) {
@@ -419,5 +422,262 @@ describe('AI pass routes', () => {
     const cfg = { ...poolCfg(6), transitions: { ...poolCfg(6).transitions, defaultBars: 16 } };
     const res = await app.request('/sets', post({ name: 'Old bars', config: cfg, result: old }));
     expect(res.status).toBe(202);
+  });
+});
+
+describe('drafts', () => {
+  const put = (body: unknown) => ({ ...post(body), method: 'PUT' });
+
+  async function saveDraft(app: ReturnType<typeof setup>['app'], name = 'Sunday draft') {
+    const cfg = poolCfg(6);
+    const result = (await (await app.request('/preview', post({ config: cfg, seed: 5 }))).json()) as DjSetResult;
+    const res = await app.request('/drafts', post({ name, config: cfg, result }));
+    expect(res.status).toBe(201);
+    return { draft: (await res.json()) as DjSetRecord, result, cfg };
+  }
+
+  it('POST /drafts saves a draft without calling Spotify', async () => {
+    const { app, calls } = setup();
+    const { draft, result } = await saveDraft(app);
+    expect(draft).toMatchObject({ name: 'Sunday draft', status: 'draft', updatedAt: null, spotifyPlaylistId: null, spotifyUrl: null, tracks: 6 });
+    expect(draft.result.tracks.map((t) => t.id)).toEqual(result.tracks.map((t) => t.id));
+    expect(calls).toHaveLength(0);
+
+    const list = (await (await app.request('/sets')).json()) as DjSetSummary[];
+    expect(list[0]).toMatchObject({ id: draft.id, status: 'draft' });
+    expect(list[0]).not.toHaveProperty('result');
+
+    expect((await app.request('/drafts', post({ name: '', config: poolCfg(6), result }))).status).toBe(400);
+    expect((await app.request('/drafts', post({ name: 'x', config: poolCfg(6), result: { ...result, transitions: [] } }))).status).toBe(400);
+  });
+
+  it('saves a draft in demo mode, where Spotify is blocked', async () => {
+    const was = appConfig.demo;
+    appConfig.demo = true;
+    try {
+      expect(isBlockedInDemo('POST', '/api/dj/drafts')).toBe(false);
+      expect(isBlockedInDemo('PUT', '/api/dj/sets/x')).toBe(false);
+      const { app, calls } = setup();
+      const { draft } = await saveDraft(app);
+      expect(draft.status).toBe('draft');
+      expect((await app.request(`/sets/${draft.id}`, put({ name: 'Renamed' }))).status).toBe(200);
+      const create = await app.request(`/sets/${draft.id}/create`, { method: 'POST' });
+      expect(create.status).toBe(403);
+      expect(((await create.json()) as { error: string }).error).toBe(DEMO_MESSAGE);
+      expect(calls).toHaveLength(0);
+    } finally {
+      appConfig.demo = was;
+    }
+  });
+
+  it('PUT /sets/:id renames a draft or replaces its tracks and sheet', async () => {
+    const { app } = setup();
+    const { draft } = await saveDraft(app);
+
+    const renamed = (await (await app.request(`/sets/${draft.id}`, put({ name: 'Sunday warm-up' }))).json()) as DjSetRecord;
+    expect(renamed).toMatchObject({ name: 'Sunday warm-up', status: 'draft', tracks: 6 });
+    expect(renamed.updatedAt).toEqual(expect.any(String));
+
+    const shorter = (await (await app.request('/preview', post({ config: poolCfg(4), seed: 9 }))).json()) as DjSetResult;
+    shorter.transitions[0]!.settings = SLAM;
+    const replaced = (await (await app.request(`/sets/${draft.id}`, put({ config: poolCfg(4), result: shorter }))).json()) as DjSetRecord;
+    expect(replaced).toMatchObject({ name: 'Sunday warm-up', tracks: 4 });
+    expect(replaced.config.length).toEqual({ mode: 'tracks', count: 4 });
+    expect(replaced.result.transitions[0]!.settings).toEqual(SLAM);
+    expect(replaced.updatedAt! >= renamed.updatedAt!).toBe(true);
+
+    expect((await app.request(`/sets/${draft.id}`, put({}))).status).toBe(400);
+    expect((await app.request(`/sets/${draft.id}`, put({ name: ' ' }))).status).toBe(400);
+    expect((await app.request('/sets/nope', put({ name: 'x' }))).status).toBe(404);
+  });
+
+  it('PATCH transitions works on a draft and moves updatedAt', async () => {
+    const { app } = setup();
+    const { draft } = await saveDraft(app);
+    const res = await app.request(`/sets/${draft.id}/transitions/0`, patch({ settings: SLAM, applied: true }));
+    expect(res.status).toBe(200);
+    const after = (await res.json()) as DjSetRecord;
+    expect(after).toMatchObject({ status: 'draft', applied: 1 });
+    expect(after.result.transitions[0]!.settings).toEqual(SLAM);
+    expect(after.updatedAt).toEqual(expect.any(String));
+  });
+
+  it('POST /sets/:id/create creates a saved draft on Spotify later', async () => {
+    const { app, db, calls } = setup();
+    const { draft } = await saveDraft(app);
+    await app.request(`/sets/${draft.id}`, put({ name: 'Sunday warm-up' }));
+    await app.request(`/sets/${draft.id}/transitions/1`, patch({ settings: SLAM }));
+
+    const res = await app.request(`/sets/${draft.id}/create`, { method: 'POST' });
+    expect(res.status).toBe(202);
+    const { job, setId } = (await res.json()) as { job: Job; setId: string };
+    expect(setId).toBe(draft.id);
+    expect((await waitForJob(db, job.id)).status).toBe('done');
+
+    const create = calls.find((c) => c.url.endsWith('/me/playlists'))!;
+    expect(create.body).toMatchObject({ name: 'Sunday warm-up', description: DJ_PLAYLIST_DESCRIPTION, public: false });
+    const add = calls.find((c) => c.url.includes('/playlists/newpl/items'))!;
+    expect((add.body as { uris: string[] }).uris).toEqual(draft.result.tracks.map((t) => t.uri));
+
+    const one = (await (await app.request(`/sets/${draft.id}`)).json()) as DjSetRecord;
+    expect(one).toMatchObject({ status: 'created', spotifyPlaylistId: 'newpl', spotifyUrl: 'https://open.spotify.com/playlist/newpl' });
+    expect(one.result.transitions[1]!.settings).toEqual(SLAM);
+    expect(((await (await app.request('/sets')).json()) as DjSetSummary[])).toHaveLength(1);
+
+    // Created now: no second create, no replace; the Applied tick still works.
+    const again = await app.request(`/sets/${draft.id}/create`, { method: 'POST' });
+    expect(again.status).toBe(409);
+    const replace = await app.request(`/sets/${draft.id}`, put({ name: 'New name' }));
+    expect(replace.status).toBe(409);
+    expect(((await replace.json()) as { error: string }).error).toBe(CREATED_SET_MESSAGE);
+    expect((await app.request(`/sets/${draft.id}/transitions/0`, patch({ applied: true }))).status).toBe(200);
+    expect((await app.request('/sets/nope/create', { method: 'POST' })).status).toBe(404);
+  });
+
+  it('answers 409 while a create runs, and keeps the draft when the create fails', async () => {
+    const { app, db } = setup();
+    const { draft } = await saveDraft(app);
+    const { draft: other } = await saveDraft(app, 'Other draft');
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    let failNext = true;
+    const client = {
+      createPlaylist: async () => {
+        await gate;
+        if (failNext) throw new Error('Spotify said no');
+        return { id: 'later', url: 'https://open.spotify.com/playlist/later' };
+      },
+    } as unknown as SpotifyClient;
+    const slow = makeDjRoutes({ db: () => db, client: () => client });
+
+    const first = await slow.request(`/sets/${draft.id}/create`, { method: 'POST' });
+    expect(first.status).toBe(202);
+    const { job } = (await first.json()) as { job: Job };
+    expect((await slow.request(`/sets/${other.id}/create`, { method: 'POST' })).status).toBe(409);
+    expect((await slow.request(`/sets/${draft.id}`, put({ name: 'Mid-create' }))).status).toBe(409);
+    expect((await slow.request(`/sets/${draft.id}`, { method: 'DELETE' })).status).toBe(409);
+
+    release();
+    const done = await waitForJob(db, job.id);
+    expect(done).toMatchObject({ status: 'failed', error: 'Spotify said no' });
+    const kept = (await (await slow.request(`/sets/${draft.id}`)).json()) as DjSetRecord;
+    expect(kept).toMatchObject({ status: 'draft', spotifyPlaylistId: null });
+
+    failNext = false;
+    const retry = await slow.request(`/sets/${draft.id}/create`, { method: 'POST' });
+    expect(retry.status).toBe(202);
+    expect((await waitForJob(db, ((await retry.json()) as { job: Job }).job.id)).status).toBe('done');
+    expect(((await (await slow.request(`/sets/${draft.id}`)).json()) as DjSetRecord).status).toBe('created');
+  });
+
+  it('DELETE /sets/:id removes drafts and created sets, only locally', async () => {
+    const { app, db, calls } = setup();
+    const { draft } = await saveDraft(app);
+    const { setId } = await createSet(app, db);
+    const before = calls.length;
+
+    expect((await app.request(`/sets/${draft.id}`, { method: 'DELETE' })).status).toBe(204);
+    expect((await app.request(`/sets/${setId}`, { method: 'DELETE' })).status).toBe(204);
+    expect(calls).toHaveLength(before);
+    expect(await (await app.request('/sets')).json()).toEqual([]);
+    expect((await app.request(`/sets/${draft.id}`, { method: 'DELETE' })).status).toBe(404);
+  });
+
+  it('created sets report status created; an old row without a playlist id keeps its status', async () => {
+    const { app, db } = setup();
+    const { setId } = await createSet(app, db);
+    db.prepare(
+      `INSERT INTO dj_sets (id, name, config_json, result_json, spotify_playlist_id, created_at) SELECT 'failed', 'Failed', config_json, result_json, NULL, created_at FROM dj_sets WHERE id = ?`,
+    ).run(setId);
+    const list = (await (await app.request('/sets')).json()) as DjSetSummary[];
+    expect(list.find((s) => s.id === setId)).toMatchObject({ status: 'created', updatedAt: null, spotifyPlaylistId: 'newpl' });
+    expect(list.find((s) => s.id === 'failed')).toMatchObject({ status: 'created', spotifyPlaylistId: null });
+  });
+});
+
+describe('Set Templates', () => {
+  const withTracks = () =>
+    config({
+      pool: { playlistIds: ['pl1'], library: null, recent: { short_term: false, medium_term: true, long_term: false } },
+      length: { mode: 'minutes', minutes: 90 },
+      keyStrictness: 'strict',
+      startTrackId: 't1',
+      lockedTrackIds: ['t2'],
+      excludedTrackIds: ['t3'],
+    });
+
+  it('POST /templates stores settings, never tracks, and the Pool only when asked', async () => {
+    const { app } = setup();
+    const res = await app.request('/templates', post({ name: 'Friday warm-up', includePool: true, config: withTracks() }));
+    expect(res.status).toBe(201);
+    const withPool = (await res.json()) as DjTemplate;
+    expect(withPool).toMatchObject({ name: 'Friday warm-up', includePool: true, config: { keyStrictness: 'strict', length: { mode: 'minutes', minutes: 90 } } });
+    expect(withPool.config.pool.playlistIds).toEqual(['pl1']);
+    expect(withPool.config).toMatchObject({ startTrackId: null, lockedTrackIds: [], excludedTrackIds: [] });
+
+    const noPool = (await (await app.request('/templates', post({ name: 'Late night', includePool: false, config: withTracks() }))).json()) as DjTemplate;
+    expect(noPool.includePool).toBe(false);
+    expect(noPool.config.pool).toEqual(DEFAULT_DJ_CONFIG.pool);
+    expect(noPool.config.keyStrictness).toBe('strict');
+
+    const list = (await (await app.request('/templates')).json()) as DjTemplate[];
+    expect(list.map((t) => t.name)).toEqual(['Late night', 'Friday warm-up']);
+  });
+
+  it('fills an old or partial config and rejects a bad body', async () => {
+    const { app } = setup();
+    const partial = await app.request('/templates', post({ name: 'Partial', includePool: false, config: { keyStrictness: 'off' } }));
+    expect(partial.status).toBe(201);
+    expect(((await partial.json()) as DjTemplate).config).toMatchObject({ keyStrictness: 'off', transitions: DEFAULT_DJ_CONFIG.transitions });
+
+    expect((await app.request('/templates', post({ name: '', includePool: false, config: config() }))).status).toBe(400);
+    expect((await app.request('/templates', post({ name: 'x', config: config() }))).status).toBe(400);
+    expect((await app.request('/templates', post({ name: 'x', includePool: false, config: { ...config(), maxBpmStepPct: -1 } }))).status).toBe(400);
+    expect((await app.request('/templates', post({ name: 'x', includePool: false }))).status).toBe(400);
+  });
+
+  it('answers 409 when the name exists, ignoring case', async () => {
+    const { app } = setup();
+    await app.request('/templates', post({ name: 'Friday warm-up', includePool: false, config: config() }));
+    const res = await app.request('/templates', post({ name: '  FRIDAY Warm-Up ', includePool: true, config: config() }));
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toMatch(/exists already/);
+
+    const other = (await (await app.request('/templates', post({ name: 'Sunday', includePool: false, config: config() }))).json()) as DjTemplate;
+    expect((await app.request(`/templates/${other.id}`, patch({ name: 'friday WARM-UP' }))).status).toBe(409);
+    // Its own name in another case is fine.
+    expect((await app.request(`/templates/${other.id}`, patch({ name: 'SUNDAY' }))).status).toBe(200);
+  });
+
+  it('PATCH /templates/:id renames, switches the Pool and replaces the config', async () => {
+    const { app } = setup();
+    const created = (await (await app.request('/templates', post({ name: 'Friday', includePool: true, config: withTracks() }))).json()) as DjTemplate;
+
+    const renamed = (await (await app.request(`/templates/${created.id}`, patch({ name: 'Friday peak' }))).json()) as DjTemplate;
+    expect(renamed).toMatchObject({ id: created.id, name: 'Friday peak', includePool: true, createdAt: created.createdAt });
+    expect(renamed.config.pool.playlistIds).toEqual(['pl1']);
+    expect(renamed.updatedAt >= created.updatedAt).toBe(true);
+
+    const dropped = (await (await app.request(`/templates/${created.id}`, patch({ includePool: false }))).json()) as DjTemplate;
+    expect(dropped.includePool).toBe(false);
+    expect(dropped.config.pool).toEqual(DEFAULT_DJ_CONFIG.pool);
+
+    const newCfg = (await (await app.request(`/templates/${created.id}`, patch({ includePool: true, config: { ...withTracks(), artistSpacing: 7 } }))).json()) as DjTemplate;
+    expect(newCfg).toMatchObject({ includePool: true, config: { artistSpacing: 7, lockedTrackIds: [], startTrackId: null } });
+    expect(newCfg.config.pool.playlistIds).toEqual(['pl1']);
+
+    expect((await app.request(`/templates/${created.id}`, patch({}))).status).toBe(400);
+    expect((await app.request(`/templates/${created.id}`, patch({ includePool: 'yes' }))).status).toBe(400);
+    expect((await app.request('/templates/nope', patch({ name: 'x' }))).status).toBe(404);
+  });
+
+  it('DELETE /templates/:id removes it', async () => {
+    const { app } = setup();
+    const created = (await (await app.request('/templates', post({ name: 'Gone soon', includePool: false, config: config() }))).json()) as DjTemplate;
+    expect((await app.request(`/templates/${created.id}`, { method: 'DELETE' })).status).toBe(204);
+    expect(await (await app.request('/templates')).json()).toEqual([]);
+    expect((await app.request(`/templates/${created.id}`, { method: 'DELETE' })).status).toBe(404);
+    // The name is free again.
+    expect((await app.request('/templates', post({ name: 'Gone soon', includePool: false, config: config() }))).status).toBe(201);
   });
 });

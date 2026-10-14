@@ -7,6 +7,7 @@ import { enrichRoutes } from './features/enrich/routes.ts';
 import { pruneRoutes } from './features/prune/routes.ts';
 import { djRoutes } from './features/dj/routes.ts';
 import { proposalsRoutes } from './features/proposals/routes.ts';
+import { backupRoutes } from './features/backup/routes.ts';
 
 export const app = new Hono()
   .route('/auth', authRoutes)
@@ -16,6 +17,7 @@ export const app = new Hono()
   .route('/api/prune', pruneRoutes)
   .route('/api/dj', djRoutes)
   .route('/api/proposals', proposalsRoutes)
+  .route('/api/backup', backupRoutes)
   .get('/api/health', (c) => c.json({ ok: true }));
 
 app.onError((err, c) => {

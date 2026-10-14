@@ -439,9 +439,15 @@ export interface DjCreateRequest {
   result: DjSetResult;
 }
 
+/** draft = saved in the app only; created = also a playlist on Spotify. */
+export type DjSetStatus = 'draft' | 'created';
+
 export interface DjSetSummary {
   id: string;
   name: string;
+  status: DjSetStatus;
+  /** Last change to a draft (name, tracks, sheet); null for sets never edited after saving. */
+  updatedAt: string | null;
   createdAt: string;
   tracks: number;
   durationMs: number;
@@ -455,6 +461,37 @@ export interface DjSetSummary {
 export interface DjSetRecord extends DjSetSummary {
   config: DjSetConfig;
   result: DjSetResult;
+}
+
+/** POST /api/dj/drafts — save a DJ Set in the app without creating it on Spotify. */
+export interface DjDraftRequest {
+  name: string;
+  config: DjSetConfig;
+  result: DjSetResult;
+}
+
+/** PUT /api/dj/sets/:id — drafts only: rename, or replace the tracks and sheet. */
+export interface DjDraftUpdate {
+  name?: string;
+  config?: DjSetConfig;
+  result?: DjSetResult;
+}
+
+/** A Set Template the user saved. Without the Pool, applying it keeps the current Pool. */
+export interface DjTemplate {
+  id: string;
+  name: string;
+  includePool: boolean;
+  config: DjSetConfig;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** POST /api/dj/templates; PATCH takes any subset. */
+export interface DjTemplateInput {
+  name: string;
+  includePool: boolean;
+  config: DjSetConfig;
 }
 
 /** PATCH /api/dj/sets/:id/transitions/:index */

@@ -2,9 +2,11 @@ import {
   DJ_PLAYLIST_DESCRIPTION,
   normaliseDjConfig,
   type DjCreateRequest,
+  type DjDraftUpdate,
   type DjSetConfig,
   type DjSetRecord,
   type DjSetResult,
+  type DjSetStatus,
   type DjSetSummary,
   type DjSetTrack,
   type DjTransition,
@@ -24,6 +26,8 @@ interface Row {
   result_json: string;
   spotify_playlist_id: string | null;
   created_at: string;
+  status: DjSetStatus;
+  updated_at: string | null;
 }
 
 const playlistUrl = (id: string | null) => (id ? `https://open.spotify.com/playlist/${id}` : null);
@@ -101,6 +105,9 @@ function toRecord(r: Row): DjSetRecord {
   return {
     id: r.id,
     name: r.name,
+    // A row without a playlist id that says 'created' stays as it is (an old failed create).
+    status: r.status === 'draft' ? 'draft' : 'created',
+    updatedAt: r.updated_at,
     createdAt: r.created_at,
     tracks: tracks.length,
     durationMs: result.durationMs,
@@ -113,10 +120,35 @@ function toRecord(r: Row): DjSetRecord {
   };
 }
 
-export function saveDjSet(db: DB, id: string, req: DjCreateRequest, spotifyPlaylistId: string | null) {
+export function saveDjSet(db: DB, id: string, req: DjCreateRequest, spotifyPlaylistId: string | null, status: DjSetStatus = 'created') {
   db.prepare(
-    `INSERT INTO dj_sets (id, name, config_json, result_json, spotify_playlist_id, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(id, req.name, JSON.stringify(req.config), JSON.stringify(req.result), spotifyPlaylistId, nowIso());
+    `INSERT INTO dj_sets (id, name, config_json, result_json, spotify_playlist_id, created_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(id, req.name, JSON.stringify(req.config), JSON.stringify(req.result), spotifyPlaylistId, nowIso(), status);
+}
+
+/** Saves a Draft: the set lives in the app only, nothing goes to Spotify. */
+export function saveDjDraft(db: DB, id: string, req: DjCreateRequest): DjSetRecord {
+  saveDjSet(db, id, req, null, 'draft');
+  return getDjSet(db, id)!;
+}
+
+/** Renames a draft or replaces its config, tracks and sheet. The caller checks that it is a draft. */
+export function updateDjDraft(db: DB, id: string, update: DjDraftUpdate): DjSetRecord | null {
+  const set = getDjSet(db, id);
+  if (!set) return null;
+  db.prepare('UPDATE dj_sets SET name = ?, config_json = ?, result_json = ?, updated_at = ? WHERE id = ?').run(
+    update.name ?? set.name,
+    JSON.stringify(update.config ?? set.config),
+    JSON.stringify(update.result ?? set.result),
+    nowIso(),
+    id,
+  );
+  return getDjSet(db, id);
+}
+
+/** Removes only the local record; a playlist already on Spotify stays there. */
+export function deleteDjSet(db: DB, id: string): boolean {
+  return db.prepare('DELETE FROM dj_sets WHERE id = ?').run(id).changes > 0;
 }
 
 export function getDjSet(db: DB, id: string): DjSetRecord | null {
@@ -125,7 +157,7 @@ export function getDjSet(db: DB, id: string): DjSetRecord | null {
 }
 
 export function listDjSets(db: DB): DjSetSummary[] {
-  const rows = db.prepare('SELECT * FROM dj_sets ORDER BY created_at DESC').all() as Row[];
+  const rows = db.prepare('SELECT * FROM dj_sets ORDER BY created_at DESC, rowid DESC').all() as Row[];
   return rows.map((r) => {
     const { config: _c, result: _r, ...summary } = toRecord(r);
     return summary;
@@ -149,8 +181,11 @@ export function patchDjTransition(db: DB, id: string, index: number, patch: DjTr
   return saveDjSetResult(db, id, set.result);
 }
 
+/** Stores a new result (sheet edits, AI pass). Every change to a draft moves its updated_at. */
 export function saveDjSetResult(db: DB, id: string, result: DjSetResult): DjSetRecord | null {
-  db.prepare('UPDATE dj_sets SET result_json = ? WHERE id = ?').run(JSON.stringify(result), id);
+  db.prepare(
+    `UPDATE dj_sets SET result_json = ?, updated_at = CASE WHEN status = 'draft' THEN ? ELSE updated_at END WHERE id = ?`,
+  ).run(JSON.stringify(result), nowIso(), id);
   return getDjSet(db, id);
 }
 
@@ -171,5 +206,23 @@ export async function createDjSet(
   const playlist = await client.createPlaylist({ name: req.name, description: DJ_PLAYLIST_DESCRIPTION, uris });
   progress(uris.length, uris.length, 'Saving the set…');
   saveDjSet(db, id, req, playlist.id);
+  return playlist;
+}
+
+/**
+ * Creates a saved draft as a new private playlist, then marks the set created.
+ * Uses the draft as it was when the job started.
+ */
+export async function createDjDraftOnSpotify(
+  db: DB,
+  client: SpotifyClient,
+  draft: DjSetRecord,
+  progress: (done: number, total: number, message?: string) => void = () => {},
+) {
+  const uris = draft.result.tracks.map((t) => t.uri);
+  progress(0, uris.length, 'Creating the playlist on Spotify…');
+  const playlist = await client.createPlaylist({ name: draft.name, description: DJ_PLAYLIST_DESCRIPTION, uris });
+  progress(uris.length, uris.length, 'Saving the set…');
+  db.prepare(`UPDATE dj_sets SET status = 'created', spotify_playlist_id = ? WHERE id = ?`).run(playlist.id, draft.id);
   return playlist;
 }

@@ -71,6 +71,8 @@ describe('patchRecord', () => {
     const record: DjSetRecord = {
       id: 's1',
       name: 'Test',
+      status: 'created',
+      updatedAt: null,
       createdAt: '2026-10-14T00:00:00Z',
       tracks: 3,
       durationMs: result.durationMs,

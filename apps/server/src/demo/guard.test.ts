@@ -11,7 +11,7 @@ const call = (handler: (req: Request) => Response | Promise<Response>, method: s
 
 describe('isBlockedInDemo', () => {
   it('blocks Sync, Enrich, Spotify writes and logout', () => {
-    for (const path of ['/api/sync', '/api/enrich', '/api/prune', '/api/prune/restore/3', '/api/proposals/apply', '/api/dj/sets', '/auth/logout'])
+    for (const path of ['/api/sync', '/api/enrich', '/api/prune', '/api/prune/restore/3', '/api/proposals/apply', '/api/dj/sets', '/api/dj/sets/abc/create', '/auth/logout'])
       expect(isBlockedInDemo('POST', path), path).toBe(true);
   });
 
@@ -22,6 +22,7 @@ describe('isBlockedInDemo', () => {
     expect(isBlockedInDemo('PATCH', '/api/proposals/x')).toBe(false);
     expect(isBlockedInDemo('POST', '/api/dj/preview')).toBe(false);
     expect(isBlockedInDemo('GET', '/api/dj/sets')).toBe(false);
+    expect(isBlockedInDemo('POST', '/api/dj/drafts')).toBe(false);
   });
 });
 

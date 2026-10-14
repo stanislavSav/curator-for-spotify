@@ -14,6 +14,10 @@ const PATH_RULES = [
   { test: (p, b) => /\.sqlite/i.test(b), reason: 'SQLite database file' },
   { test: (p, b) => /\.db(-wal|-shm|-journal)?$/i.test(b), reason: 'database file' },
   { test: (p, b) => /^(snapshot|proposals)([._-][^/]*)?\.json$/i.test(b), reason: 'Snapshot or Proposals file (real library data)' },
+  {
+    test: (p, b) => /^spotify-curator-backup.*\.json(\.gz)?$/i.test(b) || /\.curator-backup\.json(\.gz)?$/i.test(b),
+    reason: 'Full Backup file (your library, playlists and work)',
+  },
   { test: (p, b) => b === '.env' || b.startsWith('.env.'), reason: '.env file (holds your Client ID)' },
   { test: (p, b) => /\.(pem|key|p12|pfx)$/i.test(b), reason: 'key or certificate file' },
   { test: (p, b) => b === '.private-markers', reason: 'your personal markers file (keep it git-ignored)' },

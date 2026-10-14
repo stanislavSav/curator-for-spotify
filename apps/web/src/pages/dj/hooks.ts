@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AiPassAgents, AiPassRequest, AiPassResult, DjSetConfig, DjSetRecord, DjSetResult, DjTransition, DjTransitionPatch, Job } from '@curator/shared';
+import type {
+  AiPassAgents,
+  AiPassRequest,
+  AiPassResult,
+  DjSetConfig,
+  DjSetRecord,
+  DjSetResult,
+  DjTemplate,
+  DjTemplateInput,
+  DjTransition,
+  DjTransitionPatch,
+  Job,
+} from '@curator/shared';
 import { api, useJob } from '../../api.ts';
 import { aiBannerText } from './ai.ts';
 import { carryEdits, patchRecord } from './edits.ts';
@@ -43,6 +55,8 @@ export function useLivePreview(config: DjSetConfig, seed: number) {
   configRef.current = config;
   const builtRef = useRef(built);
   builtRef.current = built;
+  /** Edits and AI values to carry onto the next build instead of the shown preview's (a saved set's). */
+  const carryFromRef = useRef<DjSetResult | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -56,7 +70,9 @@ export function useLivePreview(config: DjSetConfig, seed: number) {
           signal: ctrl.signal,
         });
         if (ctrl.signal.aborted) return;
-        const { result, kept, dropped } = carryEdits(builtRef.current?.result ?? null, fresh);
+        const prev = carryFromRef.current ?? builtRef.current?.result ?? null;
+        carryFromRef.current = null;
+        const { result, kept, dropped } = carryEdits(prev, fresh);
         setBuilt({ config: c, result, at: Date.now(), carried: { kept, dropped } });
         setError(null);
         setPending(false);
@@ -105,8 +121,14 @@ export function useLivePreview(config: DjSetConfig, seed: number) {
 
   /** Applies an edit to the shown preview (page state only). */
   const edit = (f: (r: DjSetResult) => DjSetResult) => setBuilt((b) => (b ? { ...b, result: f(b.result) } : b));
-  /** Builds the set again from the current settings (same seed). */
-  const rebuild = () => setBuildNo((n) => n + 1);
+  /**
+   * Builds the set again from the current settings (same seed). `carryFrom`
+   * (a saved set) gives the edits to keep instead of the shown preview's.
+   */
+  const rebuild = (carryFrom?: DjSetResult) => {
+    if (carryFrom) carryFromRef.current = carryFrom;
+    setBuildNo((n) => n + 1);
+  };
   /** The shown set was built from other set settings than the current ones. */
   const dirty = built != null && !pending && shapeOf(built.config) !== shapeOf(config);
 
@@ -147,6 +169,34 @@ export function useDjSet(id: string | null) {
     error: query.error ?? patch.error,
     loading: query.isLoading,
     update: (index: number, body: DjTransitionPatch) => patch.mutate({ index, body }),
+  };
+}
+
+/** The user's Set Templates. Mutations throw ApiError; a 409 means the name is taken. */
+export function useDjTemplates() {
+  const qc = useQueryClient();
+  const queryKey = ['dj', 'templates'];
+  const query = useQuery({ queryKey, queryFn: () => api<DjTemplate[]>('/api/dj/templates') });
+  const settle = { onSettled: () => qc.invalidateQueries({ queryKey }) };
+  const create = useMutation({
+    mutationFn: (input: DjTemplateInput) => api<DjTemplate>('/api/dj/templates', { method: 'POST', json: input }),
+    ...settle,
+  });
+  const update = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<DjTemplateInput> }) =>
+      api<DjTemplate>(`/api/dj/templates/${id}`, { method: 'PATCH', json: patch }),
+    ...settle,
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api<void>(`/api/dj/templates/${id}`, { method: 'DELETE' }),
+    ...settle,
+  });
+  return {
+    list: query.data ?? [],
+    error: query.error,
+    create: create.mutateAsync,
+    update: update.mutateAsync,
+    remove: remove.mutateAsync,
   };
 }
 

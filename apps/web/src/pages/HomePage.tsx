@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStatus } from '../api.ts';
 import { Button, Empty, ErrorNote } from '../components/ui.tsx';
+import { FullBackupCard } from './home/FullBackupCard.tsx';
 import { ConnectStep, CreateAppStep, NextSteps, SyncStep, useSyncSummary } from './home/steps.tsx';
 
 const AUTH_ERRORS: Record<string, string> = {
@@ -55,6 +56,7 @@ export function HomePage() {
           <NextSteps synced={Boolean(auth.data.connected && summary.data?.lastSuccessAt)} />
         </>
       )}
+      <FullBackupCard />
     </div>
   );
 }

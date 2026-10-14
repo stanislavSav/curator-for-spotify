@@ -25,13 +25,12 @@ import {
   tempoSummary,
   transitionsSummary,
 } from './summaries.ts';
-import { SET_TEMPLATES } from './templates.ts';
 
 type Props = {
   config: DjSetConfig;
   onChange: (c: DjSetConfig) => void;
-  /** A Set Template is an explicit choice: apply it and rebuild at once. */
-  onApplyTemplate: (c: DjSetConfig) => void;
+  /** The Set Templates row at the top. */
+  templates: ReactNode;
   options: DjPoolOptions | undefined;
   /** Usable tracks in the last preview, for the Pool summary. */
   usable: number | null;
@@ -66,7 +65,7 @@ const BARS_NOTE = 'Bars are a length to aim for, up to 8. Spotify sets the exact
 
 type SectionId = 'pool' | 'shape' | 'tempo' | 'key' | 'transitions' | 'advanced';
 
-export function ConfigPanel({ config, onChange, onApplyTemplate, options, usable, footer }: Props) {
+export function ConfigPanel({ config, onChange, templates, options, usable, footer }: Props) {
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     pool: true,
     shape: true,
@@ -86,16 +85,7 @@ export function ConfigPanel({ config, onChange, onApplyTemplate, options, usable
 
   return (
     <div className="flex min-h-0 flex-1 flex-col text-sm">
-      <div className="border-b border-zinc-800 px-4 py-3">
-        <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">Set Templates</div>
-        <div className="flex flex-wrap gap-1.5">
-          {SET_TEMPLATES.map((t) => (
-            <Chip key={t.id} on={false} title={`${t.about} Your Pool stays.`} onClick={() => onApplyTemplate(t.apply(config))}>
-              {t.label}
-            </Chip>
-          ))}
-        </div>
-      </div>
+      {templates}
 
       <div className="min-h-0 flex-1 divide-y divide-zinc-800 lg:overflow-y-auto">
         <Section title="Pool" summary={poolSummary(pool, usable)} {...section('pool')}>
