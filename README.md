@@ -8,9 +8,9 @@ A local web app for your own Spotify account. It analyses your library, proposes
 
 Everything runs on your machine. Your library stays in a local SQLite file.
 
-![DJ Set demo: generate a set, edit a transition, step through Apply mode](docs/screenshots/demo.gif)
+![A 25-second tour of Curator for Spotify: Proposals, DJ Set and the Transition Sheet](docs/screenshots/demo.webp)
 
-<sub>Demo mode with a fake library: generate a DJ set, change one transition, then step through the sheet in Apply mode.</sub>
+<sub>A 25-second tour, recorded in demo mode with a fake library.</sub>
 
 ## What it does
 

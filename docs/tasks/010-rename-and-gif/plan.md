@@ -27,6 +27,13 @@ The Spotify Developer Policy and branding guidelines say an app name should not 
 - Saved as `docs/screenshots/demo.gif`, at the top of the README. The Proposals screenshot moved into "More screenshots".
 - The GIF shows demo data only, and the privacy guard passes.
 
+## Promo video (replaces the GIF)
+
+- The owner found the screen-recorded GIF too literal; it did not give a feel for the app. A short motion-design video replaced it: a hook, the app in a browser frame, three feature moments (Proposals, DJ Set, Transition Sheet), and a closing card with the repository URL.
+- Built with Remotion in a separate local project outside this repository, so the repo gets no new dependencies. The screenshots are demo-mode captures at 2×.
+- **README:** GitHub does not autoplay an MP4 in a README; an uploaded video only gets a click-to-play player. An animated image autoplays, so the video is embedded as an **animated WebP** (`docs/screenshots/demo.webp`): 30 fps, 1200 px, about 6.5 MB. GitHub serves `.webp` as `image/webp`. A GIF of the same video was 34 MB at 960 px, so it was dropped, and `demo.gif` was removed.
+- The MP4 (1080p, 8.5 MB) is kept outside the repo for Reddit and other posts.
+
 ## Checked
 
 - Typecheck, 347 tests, 11 guard tests, `check:public`.
