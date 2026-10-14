@@ -21,8 +21,10 @@ The Spotify Developer Policy and branding guidelines say an app name should not 
 ## GIF
 
 - Recorded in demo mode (fake library, no Spotify calls) on side ports, so the owner's running app was not touched.
-- Flow: Generate set → energy and tempo chart → Transition Sheet → Edit a card and pick Rise → Apply mode, stepping through three transitions.
-- Exported from the browser, then cut to 18 frames at 960 px wide with a 128-colour palette, which brought it down to about 2.3 MB. Saved as `docs/screenshots/demo.gif`, at the top of the README. The Proposals screenshot moved into "More screenshots".
+- Flow: Generate set → energy and tempo chart → Transition Sheet → Edit a card and pick Rise → Apply mode, stepping through three transitions. A green ring marks each control just before it is clicked.
+- **First take (pushed in the rename commit) looked blurry.** The browser extension's recorder captures frames at about a third of the screen's real resolution, and the frames were then shrunk to 960 px with 128 colours.
+- **Second take:** a separate headless Chrome, driven over the DevTools protocol, with a 1200 × 760 viewport at 2× pixel density. PNG frames were halved to 1200 px with a 256-colour palette per frame and no dithering, giving 26 frames and about 2.2 MB. The recording script is a throwaway and was not committed.
+- Saved as `docs/screenshots/demo.gif`, at the top of the README. The Proposals screenshot moved into "More screenshots".
 - The GIF shows demo data only, and the privacy guard passes.
 
 ## Checked
