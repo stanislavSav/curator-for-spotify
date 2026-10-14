@@ -25,4 +25,5 @@ coverage/
 
 # Full Backup files contain personal library data
 spotify-curator-backup*.json*
+curator-for-spotify-backup*.json*
 *.curator-backup.json*

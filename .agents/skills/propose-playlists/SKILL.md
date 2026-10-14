@@ -1,11 +1,11 @@
 ---
 name: propose-playlists
-description: Read the user's Spotify Snapshot (data/snapshot.json) and write new playlist Proposals to data/proposals.json for review in the Spotify Curator app. Use when the user asks to propose playlists, for new playlist ideas, or for Proposals.
+description: Read the user's Spotify Snapshot (data/snapshot.json) and write new playlist Proposals to data/proposals.json for review in the Curator for Spotify app. Use when the user asks to propose playlists, for new playlist ideas, or for Proposals.
 ---
 
 # Propose playlists
 
-You are the curator for this Spotify Curator project. Read the user's **Snapshot** (`data/snapshot.json`) and write **Proposals** (new playlists) to `data/proposals.json`. The web app shows them at `#/proposals`, where the user approves, edits or drops each one and creates the approved ones on Spotify. You never call Spotify yourself. See `docs/adr/0003-agent-neutral-proposals.md` and the glossary in `CONTEXT.md`.
+You are the curator for this Curator for Spotify project. Read the user's **Snapshot** (`data/snapshot.json`) and write **Proposals** (new playlists) to `data/proposals.json`. The web app shows them at `#/proposals`, where the user approves, edits or drops each one and creates the approved ones on Spotify. You never call Spotify yourself. See `docs/adr/0003-agent-neutral-proposals.md` and the glossary in `CONTEXT.md`.
 
 If the user gave a focus for this run (for example "more running playlists" or "only 90s"), respect it in every step.
 
@@ -92,7 +92,7 @@ The schema is `ProposalsFileSchema` in `packages/shared/src/proposals.ts` (zod).
     {
       "id": "late-night-downtempo",                // lowercase slug, stable across runs, unique
       "name": "After Hours Downtempo",             // ≤ 100 characters
-      "description": "Trip-hop and slow electronics for the last hour of the night.", // ≤ 280 recommended (300 max; the app appends " · by Spotify Curator")
+      "description": "Trip-hop and slow electronics for the last hour of the night.", // ≤ 280 recommended (300 max; the app appends " · by Curator for Spotify")
       "theme": "mood",                             // genre | mood | era | activity | tempo | rediscover | other
       "rationale": "Why this fits the user's listening: the evidence (counts, top artists, plays, liked dates).",
       "rules": { "tags": ["trip hop", "downtempo"], "bpm": [70, 110], "years": [1994, 2020], "energy": [0, 0.55], "note": "optional" }, // optional, informational only

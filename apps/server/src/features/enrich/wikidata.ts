@@ -7,7 +7,7 @@ import { normaliseTag } from './store.ts';
 
 export const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
 export const WIKIDATA_BATCH = 150;
-const USER_AGENT = 'SpotifyCurator/0.1 (local personal app)';
+const USER_AGENT = 'CuratorForSpotify/0.1 (local personal app)';
 const SPOTIFY_ID = /^[A-Za-z0-9]{22}$/;
 
 const SYNONYMS: Record<string, string> = {

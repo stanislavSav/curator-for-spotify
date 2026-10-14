@@ -1,4 +1,4 @@
-# Spotify Curator
+# Curator for Spotify
 
 A local web app for one Spotify account. It syncs the user's Library into SQLite, enriches tracks with BPM, key, energy and tags from third-party sources, and writes a compact Snapshot (`data/snapshot.json`). An Agent (you) reads the Snapshot and writes playlist Proposals to `data/proposals.json`; the user reviews them in the app, which creates the approved playlists on Spotify. The app also prunes unused playlists (with a Backup first) and builds DJ Sets ordered by BPM, Camelot key and energy. The app has no LLM key; see `docs/adr/0001-claude-writes-proposals-offline.md` and `docs/adr/0003-agent-neutral-proposals.md`.
 

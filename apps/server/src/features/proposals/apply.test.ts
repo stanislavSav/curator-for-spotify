@@ -65,7 +65,7 @@ describe('applyProposals', () => {
     const creates = calls.filter((c) => c.path === '/v1/me/playlists');
     expect(creates[0]!.body).toEqual({
       name: 'Tempo Run',
-      description: 'High-energy tracks at 125 BPM or faster, from three different scenes. · by Spotify Curator',
+      description: 'High-energy tracks at 125 BPM or faster, from three different scenes. · by Curator for Spotify',
       public: false,
     });
     const adds = calls.filter((c) => c.path.endsWith('/items'));

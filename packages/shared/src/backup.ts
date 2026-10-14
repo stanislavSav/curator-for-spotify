@@ -3,6 +3,7 @@ import { z } from 'zod';
 // Full Backup: one file with the user's work and, optionally, the library cache.
 // Rows keep their DB column names, so export and import stay a plain copy.
 
+/** Kept from the app's first name, so Full Backups made before the rename still import. */
 export const FULL_BACKUP_FORMAT = 'spotify-curator-backup';
 export const FULL_BACKUP_VERSION = 1;
 
@@ -25,7 +26,7 @@ export const LIBRARY_TABLES = [
 export type LibraryTable = (typeof LIBRARY_TABLES)[number];
 
 /** File name for a Full Backup made at `exportedAt`. */
-export const fullBackupFileName = (exportedAt: string) => `spotify-curator-backup-${exportedAt.slice(0, 10)}.json`;
+export const fullBackupFileName = (exportedAt: string) => `curator-for-spotify-backup-${exportedAt.slice(0, 10)}.json`;
 
 // ---- rows -------------------------------------------------------------------------
 
@@ -134,7 +135,7 @@ export type ParseFullBackupResult = { ok: true; backup: FullBackup } | { ok: fal
 /** Checks format and version first, so the error says what is wrong in plain words. */
 export function parseFullBackup(input: unknown): ParseFullBackupResult {
   const head = (input && typeof input === 'object' ? input : {}) as { format?: unknown; version?: unknown };
-  if (head.format !== FULL_BACKUP_FORMAT) return { ok: false, error: 'This file is not a Spotify Curator Full Backup.' };
+  if (head.format !== FULL_BACKUP_FORMAT) return { ok: false, error: 'This file is not a Curator for Spotify Full Backup.' };
   if (typeof head.version === 'number' && head.version > FULL_BACKUP_VERSION)
     return {
       ok: false,

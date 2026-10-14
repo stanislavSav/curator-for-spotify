@@ -2,7 +2,7 @@ import { getJson, type HttpDeps, type Throttle } from './http.ts';
 import { normaliseName, normaliseTag, round2 } from './store.ts';
 
 export const MB_URL = 'https://musicbrainz.org/ws/2';
-export const MB_USER_AGENT = 'SpotifyCurator/0.1 (local personal app)';
+export const MB_USER_AGENT = 'CuratorForSpotify/0.1 (local personal app)';
 export const MB_MAX_TAGS = 10;
 
 export interface MbArtist {

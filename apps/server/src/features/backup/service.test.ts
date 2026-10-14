@@ -282,7 +282,7 @@ describe('Full Backup import', () => {
 
 describe('parseFullBackup', () => {
   it('rejects other files with a clear message', () => {
-    expect(parseFullBackup({ version: 1, proposals: [] })).toEqual({ ok: false, error: 'This file is not a Spotify Curator Full Backup.' });
+    expect(parseFullBackup({ version: 1, proposals: [] })).toEqual({ ok: false, error: 'This file is not a Curator for Spotify Full Backup.' });
     expect(parseFullBackup(null)).toMatchObject({ ok: false });
     expect(parseFullBackup({ format: 'spotify-curator-backup', version: 2 })).toMatchObject({ ok: false, error: expect.stringContaining('newer version') });
     expect(parseFullBackup({ format: 'spotify-curator-backup', version: 1, exportedAt: 'x', includesLibrary: false, work: { djSets: [{ id: 1 }] } })).toMatchObject({

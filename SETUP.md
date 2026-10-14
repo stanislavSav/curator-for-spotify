@@ -26,7 +26,7 @@ The app works without the export. The export makes Prune Candidates much more ac
 
 1. Open <https://developer.spotify.com/dashboard> and log in with your Spotify account.
 2. Click **Create app**.
-3. Enter a name and a description, for example `Spotify Curator`. Leave **Website** empty.
+3. Enter a name and a description, for example `Curator for Spotify`. Leave **Website** empty.
 4. In **Redirect URIs**, enter the URI below and click **Add**:
 
    ```

@@ -1,4 +1,4 @@
-# Spotify Curator
+# Curator for Spotify
 
 A personal, local tool that studies one person's Spotify listening, proposes new playlists, removes playlists that are no longer used, and builds DJ-style ordered playlists.
 

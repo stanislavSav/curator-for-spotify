@@ -34,6 +34,7 @@ test('blocks private paths', () => {
 test('blocks Full Backup files anywhere', () => {
   for (const p of [
     'spotify-curator-backup-2026-10-14.json',
+    'curator-for-spotify-backup-2026-10-14.json',
     'Downloads/spotify-curator-backup-2026-10-14 (1).json',
     'docs/spotify-curator-backup.json.gz',
     'old/laptop.curator-backup.json',

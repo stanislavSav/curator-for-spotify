@@ -541,4 +541,4 @@ export interface DjTransitionPatch {
 }
 
 export const DJ_PLAYLIST_DESCRIPTION =
-  "DJ Set by Spotify Curator · apply transitions in Spotify › Mix · don't use Smart Reorder";
+  "DJ Set by Curator for Spotify · apply transitions in Spotify › Mix · don't use Smart Reorder";

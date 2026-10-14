@@ -17,7 +17,7 @@ export const PROPOSAL_LIMITS = {
 } as const;
 
 /** Appended to every description when a Proposal is created on Spotify. */
-export const CREATED_BY_SUFFIX = ' · by Spotify Curator';
+export const CREATED_BY_SUFFIX = ' · by Curator for Spotify';
 
 export const PROPOSAL_THEMES = ['genre', 'mood', 'era', 'activity', 'tempo', 'rediscover', 'other'] as const;
 export type ProposalTheme = (typeof PROPOSAL_THEMES)[number];

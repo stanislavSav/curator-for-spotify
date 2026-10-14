@@ -28,7 +28,7 @@ describe('backup routes', () => {
 
     const res = await routes.request('/export?library=1');
     expect(res.status).toBe(200);
-    expect(res.headers.get('Content-Disposition')).toMatch(/attachment; filename="spotify-curator-backup-\d{4}-\d{2}-\d{2}\.json"/);
+    expect(res.headers.get('Content-Disposition')).toMatch(/attachment; filename="curator-for-spotify-backup-\d{4}-\d{2}-\d{2}\.json"/);
     const backup = (await res.json()) as FullBackup;
     expect(backup.library?.tracks?.rows).toHaveLength(1);
     expect(((await (await routes.request('/export')).json()) as FullBackup).library).toBeNull();
@@ -51,7 +51,7 @@ describe('backup routes', () => {
     expect(await notJson.json()).toEqual({ error: 'The file is not valid JSON.' });
     const wrong = await routes.request('/import/preview', post(JSON.stringify({ format: 'something-else' })));
     expect(wrong.status).toBe(400);
-    expect(await wrong.json()).toEqual({ error: 'This file is not a Spotify Curator Full Backup.' });
+    expect(await wrong.json()).toEqual({ error: 'This file is not a Curator for Spotify Full Backup.' });
     const badImport = await routes.request('/import', post(JSON.stringify({ backup: { format: 'spotify-curator-backup', version: 9 } })));
     expect(badImport.status).toBe(400);
   });

@@ -26,7 +26,7 @@ export function CreateAppStep({ auth }: { auth: AuthStatus }) {
             and log in with your Spotify account.
           </li>
           <li>
-            Click <b>Create app</b>. Use any name and description, for example "Spotify Curator". Leave Website empty.
+            Click <b>Create app</b>. Use any name and description, for example "Curator for Spotify". Leave Website empty.
           </li>
           <li>
             In <b>Redirect URIs</b>, paste this address and click <b>Add</b>. It must match exactly. Use{' '}

@@ -42,7 +42,7 @@ export function App() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 py-4">
         <div className="flex items-center gap-3">
           <span className="h-3 w-3 rounded-full bg-brand" />
-          <span className="font-semibold">Spotify Curator</span>
+          <span className="font-semibold">Curator for Spotify</span>
         </div>
         <nav className="flex flex-wrap gap-1">
           {PAGES.map((p) => (

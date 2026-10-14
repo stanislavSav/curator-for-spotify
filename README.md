@@ -1,6 +1,6 @@
-# Spotify Curator
+# Curator for Spotify
 
-[![CI](https://github.com/stanislavSav/spotify-curator/actions/workflows/ci.yml/badge.svg)](https://github.com/stanislavSav/spotify-curator/actions/workflows/ci.yml)
+[![CI](https://github.com/stanislavSav/curator-for-spotify/actions/workflows/ci.yml/badge.svg)](https://github.com/stanislavSav/curator-for-spotify/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Node 22.12+](https://img.shields.io/badge/node-22.12%2B-blue.svg)
 
@@ -8,7 +8,9 @@ A local web app for your own Spotify account. It analyses your library, proposes
 
 Everything runs on your machine. Your library stays in a local SQLite file.
 
-![Proposals page](docs/screenshots/proposals.png)
+![DJ Set demo: generate a set, edit a transition, step through Apply mode](docs/screenshots/demo.gif)
+
+<sub>Demo mode with a fake library: generate a DJ set, change one transition, then step through the sheet in Apply mode.</sub>
 
 ## What it does
 
@@ -36,8 +38,8 @@ Everything runs on your machine. Your library stays in a local SQLite file.
 No Spotify app needed. The demo uses a fake library and never contacts Spotify.
 
 ```sh
-git clone https://github.com/stanislavSav/spotify-curator.git
-cd spotify-curator
+git clone https://github.com/stanislavSav/curator-for-spotify.git
+cd curator-for-spotify
 npm install
 npm run demo
 ```
@@ -101,6 +103,9 @@ Spotify Web API ──sync──▶ SQLite (data/curator.sqlite) ◀──enrich
 <details>
 <summary>More screenshots</summary>
 
+**Proposals**
+![Proposals page](docs/screenshots/proposals.png)
+
 **Library and enrichment**
 ![Library](docs/screenshots/library.png)
 
@@ -126,7 +131,7 @@ Spotify Web API ──sync──▶ SQLite (data/curator.sqlite) ◀──enrich
   | Wikidata | Spotify artist IDs |
 
 - Your AI agent reads `data/snapshot.json` on your machine. The **✦ AI pass** on the DJ page runs your installed agent CLI (Claude Code, Codex or Gemini CLI) with the set's track names, artists and audio features as text, without tools. What your agent's provider does with that data depends on the agent you use.
-- A **Full Backup** file holds your library data (tracks, playlists, listening history if imported). Keep it private. It never contains Spotify login tokens, and git ignores files named `spotify-curator-backup*.json`.
+- A **Full Backup** file holds your library data (tracks, playlists, listening history if imported). Keep it private. It never contains Spotify login tokens, and git ignores files named `curator-for-spotify-backup*.json` (and the older `spotify-curator-backup*.json`).
 - `npm run check:public` and a pre-commit hook block commits of `data/`, `.env`, snapshots, proposals, databases and likely secrets. Put your own names, emails or playlist names in `.private-markers` (git-ignored) to block those too.
 
 ## Commands
@@ -159,7 +164,7 @@ The DJ page's **✦ AI pass** uses the first agent CLI it finds (`claude`, `code
 
 ## Contributing
 
-This repository does not accept pull requests. To change it, **fork it**; [CONTRIBUTING.md](CONTRIBUTING.md) explains the layout, checks and docs workflow. Bug reports are welcome as [issues](https://github.com/stanislavSav/spotify-curator/issues).
+This repository does not accept pull requests. To change it, **fork it**; [CONTRIBUTING.md](CONTRIBUTING.md) explains the layout, checks and docs workflow. Bug reports are welcome as [issues](https://github.com/stanislavSav/curator-for-spotify/issues).
 
 ## License
 

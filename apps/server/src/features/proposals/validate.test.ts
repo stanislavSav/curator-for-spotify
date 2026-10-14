@@ -106,6 +106,6 @@ describe('descriptionForSpotify', () => {
     const long = descriptionForSpotify('a'.repeat(300));
     expect(long).toHaveLength(300);
     expect(long.endsWith(`…${CREATED_BY_SUFFIX}`)).toBe(true);
-    expect(descriptionForSpotify('  ')).toBe('by Spotify Curator');
+    expect(descriptionForSpotify('  ')).toBe('by Curator for Spotify');
   });
 });

@@ -15,7 +15,7 @@ const PATH_RULES = [
   { test: (p, b) => /\.db(-wal|-shm|-journal)?$/i.test(b), reason: 'database file' },
   { test: (p, b) => /^(snapshot|proposals)([._-][^/]*)?\.json$/i.test(b), reason: 'Snapshot or Proposals file (real library data)' },
   {
-    test: (p, b) => /^spotify-curator-backup.*\.json(\.gz)?$/i.test(b) || /\.curator-backup\.json(\.gz)?$/i.test(b),
+    test: (p, b) => /^(spotify-curator|curator-for-spotify)-backup.*\.json(\.gz)?$/i.test(b) || /\.curator-backup\.json(\.gz)?$/i.test(b),
     reason: 'Full Backup file (your library, playlists and work)',
   },
   { test: (p, b) => b === '.env' || b.startsWith('.env.'), reason: '.env file (holds your Client ID)' },

@@ -1,5 +1,5 @@
 {
-  "name": "spotify-curator",
+  "name": "curator-for-spotify",
   "private": true,
   "type": "module",
   "workspaces": [
