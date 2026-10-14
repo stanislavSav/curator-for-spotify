@@ -11,8 +11,8 @@ import { buildCandidates, poolOptions } from './pool.ts';
 import { AGENT_LABEL, detectAgents, runAgentCli } from './ai-pass/agents.ts';
 import type { AiPassInput } from './ai-pass/prompt.ts';
 import { applyAiToSet, runAiPass, type RunAgent } from './ai-pass/run.ts';
-import { aiPassRequestSchema, djCreateSchema, djPreviewSchema, djTransitionPatchSchema } from './schema.ts';
-import { createDjSet, getDjSet, listDjSets, patchDjTransition } from './sets.ts';
+import { aiPassRequestSchema, djCreateSchema, djPreviewSchema, djSheetSchema, djTransitionPatchSchema } from './schema.ts';
+import { createDjSet, getDjSet, listDjSets, patchDjTransition, sheetFor } from './sets.ts';
 
 interface Deps {
   db: () => DB;
@@ -49,6 +49,11 @@ export function makeDjRoutes(deps: Deps) {
       const { config, seed } = p.data;
       const { candidates, stats, warnings } = buildCandidates(getLibraryTracks(deps.db()), config);
       return c.json(buildDjSet(candidates, config, seed, stats, warnings));
+    })
+    .post('/sheet', async (c) => {
+      const p = await parse(djSheetSchema, c.req);
+      if ('error' in p) return c.json({ error: p.error }, 400);
+      return c.json(sheetFor(p.data.tracks, p.data.config));
     })
     .post('/sets', async (c) => {
       const p = await parse(djCreateSchema, c.req);

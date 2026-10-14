@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AiPassAgents, AiPassRequest, AiPassResult, DjSetConfig, DjSetRecord, DjSetResult, DjTransitionPatch, Job } from '@curator/shared';
+import type { AiPassAgents, AiPassRequest, AiPassResult, DjSetConfig, DjSetRecord, DjSetResult, DjTransition, DjTransitionPatch, Job } from '@curator/shared';
 import { api, useJob } from '../../api.ts';
 import { aiBannerText } from './ai.ts';
 import { carryEdits, patchRecord } from './edits.ts';
@@ -14,30 +14,40 @@ export interface Built {
   carried: { kept: number; dropped: number };
 }
 
-/** Locks only matter for the next build, so they do not trigger a rebuild. */
-export const shapeOf = (c: DjSetConfig) => JSON.stringify({ ...c, lockedTrackIds: [] });
+/**
+ * The set's shape: everything that decides which tracks are picked and in
+ * which order. A change here waits for "Rebuild set". Locks only matter for the
+ * next build, and the sheet settings never change the tracks.
+ */
+export const shapeOf = (c: DjSetConfig) => JSON.stringify({ ...c, lockedTrackIds: [], transitions: null });
 
-const DEBOUNCE_MS = 400;
+/** The sheet settings: Sheet Style, Colour, default bars and rules. */
+export const sheetOf = (c: DjSetConfig) => JSON.stringify(c.transitions);
+
+const SHEET_DEBOUNCE_MS = 250;
 
 /**
- * Live preview: rebuilds after each config or seed change (debounced). A newer
- * change cancels the request in flight. Edits on pairs that survive the
- * rebuild are kept.
+ * The preview. The set is built on first load, on a new seed (Regenerate) and
+ * when the user asks for it (rebuild); other settings changes never re-pick
+ * tracks on their own, they only mark the preview as out of date (dirty).
+ * Sheet settings recompute the Transition Sheet for the same tracks in the same
+ * order, keeping edits and AI values. Edits on pairs that survive a rebuild are kept.
  */
 export function useLivePreview(config: DjSetConfig, seed: number) {
   const [built, setBuilt] = useState<Built | null>(null);
   const [pending, setPending] = useState(true);
+  const [sheetPending, setSheetPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [buildNo, setBuildNo] = useState(0);
   const configRef = useRef(config);
   configRef.current = config;
   const builtRef = useRef(built);
   builtRef.current = built;
-  const key = shapeOf(config);
 
   useEffect(() => {
     const ctrl = new AbortController();
     setPending(true);
-    const timer = setTimeout(async () => {
+    void (async () => {
       const c = configRef.current;
       try {
         const fresh = await api<DjSetResult>('/api/dj/preview', {
@@ -55,17 +65,52 @@ export function useLivePreview(config: DjSetConfig, seed: number) {
         setError(e);
         setPending(false);
       }
-    }, DEBOUNCE_MS);
+    })();
+    return () => ctrl.abort();
+  }, [buildNo, seed]);
+
+  const sheetKey = sheetOf(config);
+  useEffect(() => {
+    const b = builtRef.current;
+    if (!b || pending || sheetOf(b.config) === sheetKey || b.result.tracks.length < 2) return;
+    const ctrl = new AbortController();
+    setSheetPending(true);
+    const timer = setTimeout(async () => {
+      const transitionsCfg = configRef.current.transitions;
+      try {
+        const current = builtRef.current ?? b;
+        const sheet = await api<DjTransition[]>('/api/dj/sheet', {
+          method: 'POST',
+          json: { tracks: current.result.tracks, config: { ...current.config, transitions: transitionsCfg } },
+          signal: ctrl.signal,
+        });
+        if (ctrl.signal.aborted) return;
+        setBuilt((cur) => {
+          if (!cur) return cur;
+          const { result } = carryEdits(cur.result, { ...cur.result, transitions: sheet });
+          return { ...cur, config: { ...cur.config, transitions: transitionsCfg }, result };
+        });
+        setError(null);
+      } catch (e) {
+        if (!ctrl.signal.aborted) setError(e);
+      } finally {
+        if (!ctrl.signal.aborted) setSheetPending(false);
+      }
+    }, SHEET_DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
       ctrl.abort();
     };
-  }, [key, seed]);
+  }, [sheetKey, pending]);
 
   /** Applies an edit to the shown preview (page state only). */
   const edit = (f: (r: DjSetResult) => DjSetResult) => setBuilt((b) => (b ? { ...b, result: f(b.result) } : b));
+  /** Builds the set again from the current settings (same seed). */
+  const rebuild = () => setBuildNo((n) => n + 1);
+  /** The shown set was built from other set settings than the current ones. */
+  const dirty = built != null && !pending && shapeOf(built.config) !== shapeOf(config);
 
-  return { built, pending, error, edit };
+  return { built, pending, sheetPending, error, edit, rebuild, dirty };
 }
 
 /** A created set, with optimistic PATCH for edits and Applied ticks. */

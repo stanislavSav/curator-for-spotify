@@ -30,6 +30,15 @@ const playlistUrl = (id: string | null) => (id ? `https://open.spotify.com/playl
 
 const end = (t: DjSetTrack): TransitionEnd => ({ ...t, camelot: parseCamelot(t.camelot) });
 
+/**
+ * The Transition Sheet for tracks in a fixed order: used when only the sheet
+ * settings change (Sheet Style, Colour, bars, rules), so the set itself stays.
+ */
+export function sheetFor(tracks: DjSetTrack[], cfg: DjSetConfig): DjTransition[] {
+  const positions = setPositions(tracks.map((t) => t.targetEnergy));
+  return tracks.slice(1).map((b, i) => suggestTransition(end(tracks[i]!), end(b), cfg, positions[i]));
+}
+
 /** Tracks saved before task 007 have no audio features or tags. */
 function normaliseTrack(t: DjSetTrack): DjSetTrack {
   return {

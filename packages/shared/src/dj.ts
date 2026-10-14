@@ -427,6 +427,12 @@ export interface DjPreviewRequest {
   seed: number;
 }
 
+/** POST /api/dj/sheet — recompute only the Transition Sheet for these tracks, in this order. */
+export interface DjSheetRequest {
+  tracks: DjSetTrack[];
+  config: DjSetConfig;
+}
+
 export interface DjCreateRequest {
   name: string;
   config: DjSetConfig;

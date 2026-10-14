@@ -109,6 +109,26 @@ describe('dj routes', () => {
     expect(((await bad.json()) as { error: string }).error).toMatch(/maxBpmStepPct/);
   });
 
+  it('POST /sheet recomputes only the transitions, for the same tracks in the same order', async () => {
+    const { app } = setup();
+    const cfg = config({ pool: { playlistIds: ['pl1'], library: null, recent: { short_term: false, medium_term: false, long_term: false } }, length: { mode: 'tracks', count: 10 } });
+    const set = (await (await app.request('/preview', post({ config: cfg, seed: 3 }))).json()) as DjSetResult;
+    const subtle = { ...cfg, transitions: { ...cfg.transitions, colour: 'subtle' as const } };
+    const bold = { ...cfg, transitions: { ...cfg.transitions, colour: 'bold' as const } };
+    const sheet = async (c: typeof cfg) =>
+      (await (await app.request('/sheet', post({ tracks: set.tracks, config: c }))).json()) as DjSetResult['transitions'];
+    const a = await sheet(subtle);
+    const b = await sheet(bold);
+    expect(a).toHaveLength(9);
+    expect(b).toHaveLength(9);
+    // Same pairs, so tempo and key facts match; only the settings may differ.
+    expect(b.map((t) => t.bpmDeltaPct)).toEqual(a.map((t) => t.bpmDeltaPct));
+    expect(JSON.stringify(b.map((t) => t.settings))).not.toEqual(JSON.stringify(a.map((t) => t.settings)));
+
+    const bad = await app.request('/sheet', post({ tracks: set.tracks.slice(0, 1), config: cfg }));
+    expect(bad.status).toBe(400);
+  });
+
   it('POST /sets creates the playlist in order and saves the set', async () => {
     const { app, db, calls } = setup();
     const cfg = config({ pool: { playlistIds: ['pl1'], library: null, recent: { short_term: false, medium_term: false, long_term: false } }, length: { mode: 'tracks', count: 8 } });

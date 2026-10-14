@@ -19,7 +19,7 @@ import { HowToApply, SheetExportButtons } from './dj/ApplyPanel.tsx';
 import { ApplyMode } from './dj/ApplyMode.tsx';
 import { ConfigPanel } from './dj/ConfigPanel.tsx';
 import { appliedCount, editResult } from './dj/edits.ts';
-import { shapeOf, useAiPass, useDjSet, useLivePreview, useNow, type AiTarget } from './dj/hooks.ts';
+import { useAiPass, useDjSet, useLivePreview, useNow, type AiTarget } from './dj/hooks.ts';
 import { SetChart } from './dj/SetChart.tsx';
 import { fmtDuration } from './dj/sheet.ts';
 import { rebuiltAgo } from './dj/summaries.ts';
@@ -39,7 +39,10 @@ export function DjPage() {
   const [applyOpen, setApplyOpen] = useState(false);
   const now = useNow();
 
-  /** Any settings change rebuilds the preview and returns to the builder. */
+  /**
+   * A settings change returns to the builder. Set settings wait for "Rebuild
+   * set"; sheet settings only refresh the Transition Sheet (see useLivePreview).
+   */
   const setConfig = (c: DjSetConfig) => {
     setConfigState(c);
     saveConfig(c);
@@ -103,7 +106,13 @@ export function DjPage() {
     if (!creating) create.reset();
   }, [built?.at]);
 
-  const stale = built != null && shapeOf(built.config) !== shapeOf(config);
+  // While the sheet is being recomputed, the shown values may be about to change.
+  const stale = live.sheetPending;
+  /** Explicit track actions (remove, start, bring back) rebuild at once. */
+  const setConfigAndRebuild = (c: DjSetConfig) => {
+    setConfig(c);
+    live.rebuild();
+  };
   const record = viewingId ? saved.record : undefined;
 
   const footer = (
@@ -114,8 +123,23 @@ export function DjPage() {
             <FooterLine label={`${config.lockedTrackIds.length} locked track(s)`} action="Unlock all" onClick={() => setConfig({ ...config, lockedTrackIds: [] })} />
           )}
           {config.excludedTrackIds.length > 0 && (
-            <FooterLine label={`${config.excludedTrackIds.length} removed track(s)`} action="Bring back" onClick={() => setConfig({ ...config, excludedTrackIds: [] })} />
+            <FooterLine label={`${config.excludedTrackIds.length} removed track(s)`} action="Bring back" onClick={() => setConfigAndRebuild({ ...config, excludedTrackIds: [] })} />
           )}
+        </div>
+      )}
+      {live.dirty && (
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-amber-950/40 px-2 py-1.5 text-xs text-amber-200">
+          <span>Settings changed. The set below still uses the old ones.</span>
+          <Button
+            variant="primary"
+            onClick={() => {
+              live.rebuild();
+              view(null);
+            }}
+            title="Pick and order the tracks again with the current settings (same seed)."
+          >
+            Rebuild set
+          </Button>
         </div>
       )}
       <div className="flex items-center justify-between gap-2">
@@ -123,6 +147,10 @@ export function DjPage() {
           {live.pending ? (
             <>
               <Spinner /> Rebuilding…
+            </>
+          ) : live.sheetPending ? (
+            <>
+              <Spinner /> Updating the sheet…
             </>
           ) : live.error ? (
             <span className="text-red-300">Rebuild failed</span>
@@ -149,7 +177,7 @@ export function DjPage() {
         <h1 className="text-2xl font-semibold">DJ Set</h1>
         <p className="mt-1 max-w-3xl text-sm text-zinc-400">
           Build a playlist ordered for smooth transitions by BPM, Camelot key and an Energy Curve. Choose a Pool on the
-          left; the set rebuilds as you change settings. Check the Transition Sheet, create the playlist on Spotify,
+          left and press Rebuild set after a change; Sheet Style and Colour update the sheet at once. Check the Transition Sheet, create the playlist on Spotify,
           then set each transition in Spotify › Mix and tick it here.
         </p>
       </div>
@@ -159,6 +187,7 @@ export function DjPage() {
           <ConfigPanel
             config={config}
             onChange={setConfig}
+            onApplyTemplate={setConfigAndRebuild}
             options={options.data}
             usable={built?.result.pool.usable ?? null}
             footer={footer}
@@ -179,7 +208,7 @@ export function DjPage() {
                 onUpdate={saved.update}
                 onApply={() => setApplyOpen(true)}
                 onClose={() => view(null)}
-                onUseSettings={() => setConfig(normaliseDjConfig(record.config))}
+                onUseSettings={() => setConfigAndRebuild(normaliseDjConfig(record.config))}
                 error={saved.error}
                 aiButton={
                   <AiPassButton
@@ -212,9 +241,9 @@ export function DjPage() {
                     lockedIds: config.lockedTrackIds,
                     startId: config.startTrackId,
                     onLock: (id) => setConfig({ ...config, lockedTrackIds: toggleIn(config.lockedTrackIds, id) }),
-                    onStart: (id) => setConfig({ ...config, startTrackId: config.startTrackId === id ? null : id }),
+                    onStart: (id) => setConfigAndRebuild({ ...config, startTrackId: config.startTrackId === id ? null : id }),
                     onRemove: (id) =>
-                      setConfig({
+                      setConfigAndRebuild({
                         ...config,
                         excludedTrackIds: [...config.excludedTrackIds, id],
                         lockedTrackIds: config.lockedTrackIds.filter((x) => x !== id),

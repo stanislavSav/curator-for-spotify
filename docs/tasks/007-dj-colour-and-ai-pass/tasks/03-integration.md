@@ -16,3 +16,15 @@
 ## Parking lot
 
 - The very first click in the session did not start a job and could not be reproduced (most likely the click did not register). Watch for it.
+
+## Follow-up: settings no longer regenerate the set (2026-10-14)
+
+The owner reported as a bug that changing any setting on the left immediately regenerated the playlist (the live preview from task 006).
+
+- **Set settings** (Pool, Shape, Tempo, Key, Advanced): the set no longer rebuilds by itself. The footer shows "Settings changed. The set below still uses the old ones." with a **Rebuild set** button (same seed).
+- **Sheet settings** (Sheet Style, Colour, default bars, rules): a new `POST /api/dj/sheet` recomputes only the transitions for the same tracks in the same order. Edits and AI values are kept through `carryEdits`.
+- **Explicit actions rebuild at once:** Set Template, Remove track, Start track, Bring back, "Use these settings" from a saved set. Regenerate still means a new seed.
+- **Checked in the demo:**
+  - Ticking a playlist kept the set and showed the notice.
+  - Rebuild set re-picked the tracks.
+  - Colour → Bold kept the tracks and only filled the sheet (loops, echoes, reverb).
