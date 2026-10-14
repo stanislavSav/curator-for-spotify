@@ -23,6 +23,7 @@ export interface AiPassInput {
 }
 
 export const MAX_REASON = 140;
+export const MAX_SET_NAME = 60;
 
 const num = (x: number | null) => (x == null ? '?' : x.toFixed(2));
 const list = (xs: readonly (string | number)[]) => xs.map((x) => (typeof x === 'string' ? `"${x}"` : String(x))).join(', ');
@@ -84,13 +85,14 @@ Rules:
 - Colour: ${TRANSITION_COLOURS[colour].label} (${TRANSITION_COLOURS[colour].about})
 - The user's focus: ${focus?.trim() ? focus.trim() : 'none given'}
 - Each reason: one short plain sentence, at most ${MAX_REASON} characters.
+- Also suggest a name for the whole set: 2–6 words, evocative but clear about the mood, genre or moment (for example "Late Bloom Disco" or "Sunday Deep Drift"). No emoji, no quotes, no track or artist names, at most ${MAX_SET_NAME} characters.
 
 Set: ${tracks.length} tracks, ${transitions.length} transitions. Values 0–1, "?" = unknown.
 
 ${pairs.join('\n\n')}
 
 Answer with STRICT JSON only, no prose and no code fences, in this shape:
-{"summary": "one or two sentences about the set as a whole", "transitions": [{"index": 0, "preset": "Custom", "bars": 8, "volume": "...", "eq": "...", "filter": "...", "effects": "...", "looping": "...", "reason": "..."}]}
+{"name": "a name for the set", "summary": "one or two sentences about the set as a whole", "transitions": [{"index": 0, "preset": "Custom", "bars": 8, "volume": "...", "eq": "...", "filter": "...", "effects": "...", "looping": "...", "reason": "..."}]}
 Give one entry per pair, index 0 to ${transitions.length - 1}.
 `;
 }

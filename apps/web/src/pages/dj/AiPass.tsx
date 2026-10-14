@@ -112,12 +112,15 @@ export function AiPassBanner({
   agentName,
   banner,
   onDismiss,
+  nameAction,
 }: {
   running: boolean;
   message: string;
   agentName: string;
   banner: AiBanner | null;
   onDismiss: () => void;
+  /** What to do with the suggested set name (use it, rename a draft); null = show it only. */
+  nameAction?: { label: string; onClick: (name: string) => void; doneFor?: string | null } | null;
 }) {
   if (running) {
     return (
@@ -133,10 +136,30 @@ export function AiPassBanner({
         {banner.kind === 'error' ? (
           <ErrorNote error={banner.error} />
         ) : (
-          <p className="flex items-start gap-2 rounded-lg border border-zinc-700 bg-[#1f1f1f] px-3 py-2 text-sm text-zinc-100">
-            <SparkleIcon className="mt-0.5 size-4 shrink-0" />
-            <span>{banner.text}</span>
-          </p>
+          <div className="rounded-lg border border-zinc-700 bg-[#1f1f1f] px-3 py-2 text-sm text-zinc-100">
+            <p className="flex items-start gap-2">
+              <SparkleIcon className="mt-0.5 size-4 shrink-0" />
+              <span>{banner.text}</span>
+            </p>
+            {banner.setName && (
+              <p className="mt-2 flex flex-wrap items-center gap-2 pl-6 text-zinc-300">
+                <span>
+                  Suggested name: <span className="font-semibold text-white">{banner.setName}</span>
+                </span>
+                {nameAction &&
+                  (nameAction.doneFor === banner.setName ? (
+                    <span className="text-xs text-emerald-300">✓ Done</span>
+                  ) : (
+                    <button
+                      onClick={() => nameAction.onClick(banner.setName!)}
+                      className="rounded-full bg-zinc-800 px-3 py-0.5 text-xs font-medium text-zinc-100 hover:bg-zinc-700"
+                    >
+                      {nameAction.label}
+                    </button>
+                  ))}
+              </p>
+            )}
+          </div>
         )}
       </div>
       <button onClick={onDismiss} aria-label="Dismiss" className="rounded px-2 py-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100">

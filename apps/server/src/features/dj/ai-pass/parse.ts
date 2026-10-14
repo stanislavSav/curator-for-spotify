@@ -10,9 +10,26 @@ import {
   type AiPassResult,
   type TransitionSettings,
 } from '@curator/shared';
-import { MAX_REASON } from './prompt.ts';
+import { MAX_REASON, MAX_SET_NAME } from './prompt.ts';
 
-export type ParsedAnswer = Pick<AiPassResult, 'summary' | 'transitions' | 'rejected'>;
+export type ParsedAnswer = Pick<AiPassResult, 'summary' | 'transitions' | 'rejected' | 'setName'>;
+
+/**
+ * Cleans the suggested set name: no quotes, emoji or control characters, single
+ * spaces, no trailing punctuation. Null when nothing usable is left.
+ */
+export function cleanSetName(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const name = raw
+    .replace(/[\p{Extended_Pictographic}\p{Cc}]/gu, '')
+    .replace(/["“”«»]/g, '')
+    .replace(/^'+|'+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.,;:!\-–—\s]+$/u, '');
+  if (name.length < 2) return null;
+  return name.length > MAX_SET_NAME ? name.slice(0, MAX_SET_NAME).replace(/\s+\S*$/, '') || name.slice(0, MAX_SET_NAME) : name;
+}
 
 /** Thrown when the answer holds no usable JSON at all. */
 export class AiAnswerError extends Error {}
@@ -108,5 +125,5 @@ export function parseAiAnswer(output: string, pairs: number): ParsedAnswer {
   });
 
   transitions.sort((a, b) => a.index - b.index);
-  return { summary, transitions, rejected };
+  return { summary, transitions, rejected, setName: cleanSetName(answer.name) };
 }

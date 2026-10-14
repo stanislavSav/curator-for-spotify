@@ -81,11 +81,13 @@ function run(name, color, workspace, env) {
   children.push(child);
 }
 
-function kill(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+function kill(child, signal = 'SIGTERM') {
+  if (!child.pid) return;
   try {
     if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
-    else process.kill(-child.pid, 'SIGTERM');
+    // The whole group: npm exits fast, but `tsx watch` ignores SIGTERM and keeps
+    // (re)starting the server, so the group must be ended, not just the npm process.
+    else process.kill(-child.pid, signal);
   } catch {
     // Already gone.
   }
@@ -94,12 +96,12 @@ function kill(child) {
 function stop(code = 0) {
   if (stopping) return;
   stopping = true;
-  children.forEach(kill);
-  // Give the processes a moment to exit cleanly, then leave.
-  setTimeout(() => process.exit(code), 500).unref();
-  Promise.all(children.map((c) => (c.exitCode !== null || c.signalCode !== null ? null : new Promise((r) => c.once('exit', r))))).then(
-    () => process.exit(code),
-  );
+  children.forEach((c) => kill(c));
+  // Give the processes a moment to exit cleanly, then end whatever is left and leave.
+  setTimeout(() => {
+    children.forEach((c) => kill(c, 'SIGKILL'));
+    process.exit(code);
+  }, 600);
 }
 
 async function main() {

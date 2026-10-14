@@ -85,7 +85,12 @@ export function DjPage() {
     live.edit((res) => mergeAiResult(res, r, target.keys));
     return changed;
   });
-  const aiFor = (kind: AiTarget['kind'], setId?: string) => {
+  /** A name taken from the AI pass for the next Save draft / Create on Spotify of the Current Set. */
+  const [aiName, setAiName] = useState<string | null>(null);
+  // A new set (Generate, Regenerate, Clear) needs a new name.
+  const currentSeed = live.built?.result.seed ?? null;
+  useEffect(() => setAiName(null), [currentSeed]);
+  const aiFor = (kind: AiTarget['kind'], setId?: string, nameAction?: Parameters<typeof AiPassBanner>[0]['nameAction']) => {
     const t = aiPass.target;
     const mine = t != null && t.kind === kind && (t.kind === 'preview' || t.setId === setId);
     const agent = aiPass.agents?.selected;
@@ -96,6 +101,7 @@ export function DjPage() {
         agentName={agent ? AGENT_NAMES[agent] : 'your AI agent'}
         banner={mine ? aiPass.banner : null}
         onDismiss={aiPass.dismiss}
+        nameAction={nameAction}
       />
     );
   };
@@ -332,7 +338,13 @@ export function DjPage() {
                     onRun={(focus) => aiPass.run({ setId: record.id, focus }, { kind: 'set', setId: record.id })}
                   />
                 }
-                aiBanner={aiFor('set', record.id)}
+                aiBanner={aiFor(
+                  'set',
+                  record.id,
+                  isDraft(record)
+                    ? { label: 'Rename to this', doneFor: record.name, onClick: (name) => void putDraft.mutateAsync({ id: record.id, body: { name } }) }
+                    : null,
+                )}
               />
             ) : (
               <Card>
@@ -388,7 +400,7 @@ export function DjPage() {
                   </>
                 }
               >
-                {aiFor('preview')}
+                {aiFor('preview', undefined, { label: 'Use this name', doneFor: aiName, onClick: setAiName })}
                 <p className="mb-3 text-xs text-zinc-500">
                   A suggestion for each pair. Press Edit on a card to change it; your edits go with the playlist when you
                   create it. An edit stays through a rebuild as long as the same two tracks still follow each other.
@@ -403,7 +415,9 @@ export function DjPage() {
               <CreatePanel
                 disabled={built.result.tracks.length === 0 || stale || live.pending}
                 busy={live.pending || stale}
-                suggestedName={fromDraft ? uniqueName(fromDraft.name, takenNames) : suggestSetName(takenNames, new Date())}
+                suggestedName={
+                  aiName ? uniqueName(aiName, takenNames) : fromDraft ? uniqueName(fromDraft.name, takenNames) : suggestSetName(takenNames, new Date())
+                }
                 onCreate={(name) => create.mutate({ req: { name, config: built.config, result: built.result } })}
                 running={creating && !createdDraftId}
                 error={createdDraftId ? null : create.error}

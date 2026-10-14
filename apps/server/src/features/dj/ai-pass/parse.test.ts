@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AiAnswerError, extractAnswer, parseAiAnswer } from './parse.ts';
+import { AiAnswerError, cleanSetName, extractAnswer, parseAiAnswer } from './parse.ts';
 
 const entry = (index: number, over: Record<string, unknown> = {}) => ({
   index,
@@ -91,5 +91,32 @@ describe('parseAiAnswer', () => {
     const r = parseAiAnswer(answer([entry(0, { reason: 'x'.repeat(300) })]), 1);
     expect(r.transitions[0]!.reason).toHaveLength(140);
     expect(r.transitions[0]!.reason.endsWith('…')).toBe(true);
+  });
+});
+
+describe('cleanSetName', () => {
+  it('keeps a good name and tidies quotes, emoji, spaces and trailing punctuation', () => {
+    expect(cleanSetName('Late Bloom Disco')).toBe('Late Bloom Disco');
+    expect(cleanSetName('  "Sunday   Deep Drift" 🌙. ')).toBe('Sunday Deep Drift');
+    expect(cleanSetName('“Night Bus Garage”')).toBe('Night Bus Garage');
+  });
+
+  it('returns null for nothing usable', () => {
+    expect(cleanSetName(undefined)).toBeNull();
+    expect(cleanSetName(42)).toBeNull();
+    expect(cleanSetName(' 🎧 ')).toBeNull();
+  });
+
+  it('cuts a long name at a word boundary', () => {
+    const name = cleanSetName('A Very Long Name That Goes On And On About Warm Disco And Deep House Grooves Forever');
+    expect(name!.length).toBeLessThanOrEqual(60);
+    expect(name).not.toMatch(/\s$/);
+    expect('A Very Long Name That Goes On And On About Warm Disco And Deep House Grooves Forever'.startsWith(name!)).toBe(true);
+  });
+
+  it('comes back from parseAiAnswer as setName', () => {
+    const out = JSON.stringify({ name: 'Golden Hour House', summary: 'ok', transitions: [] });
+    expect(parseAiAnswer(out, 0).setName).toBe('Golden Hour House');
+    expect(parseAiAnswer(JSON.stringify({ summary: 'ok', transitions: [] }), 0).setName).toBeNull();
   });
 });

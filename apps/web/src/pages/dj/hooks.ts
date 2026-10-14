@@ -289,7 +289,7 @@ export function useNow(intervalMs = 30_000) {
 /** What an AI pass runs on: the preview (with its pair keys at the start) or a created set. */
 export type AiTarget = { kind: 'preview'; keys: string[] } | { kind: 'set'; setId: string };
 
-export type AiBanner = { kind: 'done'; text: string } | { kind: 'error'; error: unknown };
+export type AiBanner = { kind: 'done'; text: string; setName: string | null } | { kind: 'error'; error: unknown };
 
 /**
  * The AI Pass: which agent CLI is installed, the running job, and a banner
@@ -334,7 +334,7 @@ export function useAiPass(onResult: (r: AiPassResult, target: AiTarget) => numbe
       handled.current = jobId;
       const r = result.data;
       const changed = onResultRef.current(r, target);
-      setBanner({ kind: 'done', text: aiBannerText(r.agent, r.summary, changed, r.rejected.length) });
+      setBanner({ kind: 'done', text: aiBannerText(r.agent, r.summary, changed, r.rejected.length), setName: r.setName ?? null });
     }
   }, [jobId, status, result.data, result.error]);
 

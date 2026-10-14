@@ -25,6 +25,7 @@ const aiResult = (entries: AiPassResult['transitions'], rejected: AiPassResult['
   rejected,
   set: null,
   summary: 'Darker blends at the peak',
+  setName: 'Peak Hour Shadows',
 });
 
 describe('mergeAiResult', () => {

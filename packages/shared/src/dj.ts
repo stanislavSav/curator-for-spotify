@@ -371,6 +371,8 @@ export interface AiPassResult {
   /** For a saved set: the updated record (AI values already stored). */
   set: DjSetRecord | null;
   summary: string;
+  /** A name the AI suggests for the set, or null when it gave none (or an unusable one). */
+  setName: string | null;
 }
 
 export interface DjScore {

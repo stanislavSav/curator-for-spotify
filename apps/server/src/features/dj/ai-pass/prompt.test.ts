@@ -19,7 +19,9 @@ describe('buildAiPassPrompt', () => {
     expect(prompt).toContain("The user's focus: more echo, darker");
     expect(prompt).toContain('at most 140 characters');
     expect(prompt).toContain('Answer with STRICT JSON only');
-    expect(prompt).toContain('{"summary": ');
+    expect(prompt).toContain('{"name": ');
+    expect(prompt).toContain('"summary": ');
+    expect(prompt).toContain('suggest a name for the whole set');
     expect(prompt).toContain('index 0 to 2');
   });
 

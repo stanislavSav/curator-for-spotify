@@ -25,3 +25,18 @@ The DJ page kept its set only in React state. Leaving the page unmounted it. Com
   - After generating, the same set (first track, seed) is still there after switching to Library and back, and after a full reload.
   - Regenerate gives a new seed and new tracks.
   - Clear set shows a confirmation, then the empty state; the server holds no Current Set.
+
+## Follow-up: the AI pass suggests a set name (2026-10-14)
+
+- **Prompt:** asks for a name of 2–6 words; no emoji, no quotes, no track or artist names; at most 60 characters.
+- **Parser:** `cleanSetName()` strips quotes, emoji and trailing punctuation and cuts at a word boundary. `AiPassResult.setName` is null when the name is unusable.
+- **Banner:** "Suggested name: …"
+  - On the Current Set, **Use this name** prefills Save draft and Create on Spotify.
+  - On a Draft, **Rename to this** renames it.
+  - On a set already on Spotify, the name is shown only.
+  - The name is reset when the set gets a new seed.
+- **Checked live in the demo with Claude Code:** it suggested "Neon Alt Pop Lift"; Use this name → ✓ Done; Save draft was prefilled with it.
+
+## Follow-up: `npm run demo` left its server running after a normal stop
+
+Stopping the demo with SIGTERM (e.g. `pkill`) ended npm and Vite but not the server, because `tsx watch` ignores SIGTERM and restarts the server on the next file change. `scripts/demo.mjs` now sends SIGTERM to each child's process group, then SIGKILL after 600 ms. Verified: no process remains on the demo ports after a stop.
