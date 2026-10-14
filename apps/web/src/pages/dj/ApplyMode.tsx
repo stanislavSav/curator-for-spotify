@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DjSetResult } from '@curator/shared';
 import { Badge, Button, cx } from '../../components/ui.tsx';
-import { appliedCount, pairTitle } from './edits.ts';
+import { AiBadge } from './AiPass.tsx';
+import { appliedCount, isEdited, pairTitle } from './edits.ts';
 import { TransitionBody } from './TransitionCard.tsx';
 
 interface Props {
@@ -80,6 +81,8 @@ export function ApplyMode({ result, maxBpmStepPct, spotifyUrl, onApplied, onClos
           <div className={cx('mx-auto max-w-3xl', onApplied && tr.applied && 'opacity-70')}>
             <div className="mb-4 flex items-center gap-3">
               <h3 className="text-3xl font-semibold tabular-nums">{pairTitle(i, tr.settings)}</h3>
+              {isEdited(tr) && <Badge tone="info">edited</Badge>}
+              <AiBadge transition={tr} />
               {onApplied && tr.applied && <Badge tone="good">✓ applied</Badge>}
             </div>
             <TransitionBody

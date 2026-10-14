@@ -12,7 +12,7 @@ import {
 } from '@curator/shared';
 import { bpmCost, keyCost } from './harmony.ts';
 import { seededRng } from './rng.ts';
-import { suggestTransition } from './transitions.ts';
+import { setPositions, suggestTransition } from './transitions.ts';
 
 /** A Pool track that can be ordered: BPM is known. */
 export interface DjCandidate {
@@ -25,6 +25,12 @@ export interface DjCandidate {
   bpm: number;
   camelot: Camelot | null;
   energy: number | null;
+  valence: number | null;
+  danceability: number | null;
+  instrumentalness: number | null;
+  acousticness: number | null;
+  /** Top tags, highest weight first. */
+  tags: string[];
 }
 
 /**
@@ -297,11 +303,17 @@ function describe(
     durationMs: t.durationMs,
     bpm: Math.round(t.bpm * 10) / 10,
     camelot: t.camelot ? camelotLabel(t.camelot) : null,
-    energy: t.energy == null ? null : Math.round(t.energy * 100) / 100,
+    energy: round2(t.energy),
+    valence: round2(t.valence),
+    danceability: round2(t.danceability),
+    instrumentalness: round2(t.instrumentalness),
+    acousticness: round2(t.acousticness),
+    tags: t.tags.slice(0, 6),
     targetEnergy: Math.round(ctx.targets[k]! * 100) / 100,
     locked: lockedIds.has(t.id),
   }));
-  const transitions = path.slice(1).map((b, i) => suggestTransition(path[i]!, b, cfg));
+  const positions = setPositions(ctx.targets.slice(0, path.length));
+  const transitions = path.slice(1).map((b, i) => suggestTransition(path[i]!, b, cfg, positions[i]));
   const score = scoreSet(ctx, path, cfg);
 
   const overStep = transitions.filter((t) => Math.abs(t.bpmDeltaPct) > cfg.maxBpmStepPct).length;
@@ -332,6 +344,7 @@ function describe(
 }
 
 const s = (n: number) => (n === 1 ? '' : 's');
+const round2 = (x: number | null) => (x == null ? null : Math.round(x * 100) / 100);
 const verb = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 function scoreSet(ctx: Ctx, path: DjCandidate[], cfg: DjSetConfig): DjScore {

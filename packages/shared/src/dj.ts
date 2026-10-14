@@ -6,7 +6,11 @@ import type { TimeRange } from './domain.ts';
 
 export type CurvePreset = 'warmup-peak-cooldown' | 'steady' | 'build' | 'wave' | 'cooldown';
 export type KeyStrictness = 'strict' | 'relaxed' | 'off';
-export type TransitionBars = 2 | 4 | 8 | 16;
+/** Spotify offers at most 8 bars, and hides the choice when it finds no clear beat grid. */
+export type TransitionBars = 2 | 4 | 8;
+
+/** How much colour (filters, effects, loops) the sheet adds to clean blends. */
+export type TransitionColour = 'subtle' | 'medium' | 'bold';
 export type KeyRelation = 'same' | 'adjacent' | 'relative' | 'energy-boost' | 'clash' | 'unknown';
 
 /** Filters for the "whole Library" part of the Pool. Null bounds mean "no limit". */
@@ -49,7 +53,9 @@ export interface DjTransitionRules {
 export interface DjTransitionPrefs {
   /** The flavour of the whole Transition Sheet. */
   sheetStyle: SheetStyle;
-  defaultBars: 4 | 8 | 16;
+  /** subtle = only what a pair needs; medium/bold add filters, effects and loops to clean blends. */
+  colour: TransitionColour;
+  defaultBars: 4 | 8;
   rules: DjTransitionRules;
 }
 
@@ -89,6 +95,7 @@ export const DEFAULT_DJ_CONFIG: DjSetConfig = {
   excludedTrackIds: [],
   transitions: {
     sheetStyle: 'balanced',
+    colour: 'medium',
     defaultBars: 8,
     rules: { longBlendWhenCompatible: true, riseOnEnergyJump: true, shortFadeOnClash: true, autoWhenUnknown: true },
   },
@@ -119,7 +126,9 @@ export function normaliseDjConfig(raw: unknown): DjSetConfig {
     excludedTrackIds: r.excludedTrackIds ?? [],
     transitions: {
       sheetStyle: t.sheetStyle && t.sheetStyle in SHEET_STYLES ? t.sheetStyle : d.transitions.sheetStyle,
-      defaultBars: t.defaultBars ?? d.transitions.defaultBars,
+      colour: t.colour && t.colour in TRANSITION_COLOURS ? t.colour : d.transitions.colour,
+      // Older configs allowed 16; Spotify's maximum is 8.
+      defaultBars: t.defaultBars === 4 ? 4 : 8,
       rules: { ...d.transitions.rules, ...t.rules },
     },
   };
@@ -233,7 +242,11 @@ export type EffectsOption = (typeof EFFECTS_OPTIONS)[number];
 export const LOOPING_OPTIONS = ['1 beat loop', '2 beat loop', '4 beat loop', '8 beat loop', '16 beat loop', 'None'] as const;
 export type LoopingOption = (typeof LOOPING_OPTIONS)[number];
 
-export const BAR_OPTIONS: TransitionBars[] = [2, 4, 8, 16];
+export const BAR_OPTIONS: TransitionBars[] = [2, 4, 8];
+
+/** Clamps any stored bar value to what Spotify offers. */
+export const toBars = (n: number | null | undefined): TransitionBars | null =>
+  n == null ? null : n <= 2 ? 2 : n <= 4 ? 4 : 8;
 
 /**
  * The values to set in Spotify for one pair. With preset Custom all five
@@ -270,9 +283,15 @@ export const PRESET_VALUES: Partial<Record<MixPreset, Omit<TransitionSettings, '
 /** Sheet Style: the flavour of the whole Transition Sheet. */
 export type SheetStyle = 'balanced' | 'smooth' | 'club' | 'ambient';
 
+export const TRANSITION_COLOURS: Record<TransitionColour, { label: string; about: string }> = {
+  subtle: { label: 'Subtle', about: 'Only what a pair needs: clean blends stay Volume + EQ.' },
+  medium: { label: 'Medium', about: 'Adds a filter sweep or a reverb tail to some clean blends, and loops on instrumental tracks.' },
+  bold: { label: 'Bold', about: 'Filters, echoes and loops on most blends, strongest around the peak of the set.' },
+};
+
 export const SHEET_STYLES: Record<SheetStyle, { label: string; about: string }> = {
   balanced: { label: 'Balanced', about: 'Bass swaps and clean crossfades; short and masked when keys clash.' },
-  smooth: { label: 'Smooth & long', about: 'Long blends (8–16 bars), soft crossfades, no hard cuts.' },
+  smooth: { label: 'Smooth & long', about: 'Long blends (8 bars), soft crossfades, no hard cuts.' },
   club: { label: 'Club cuts', about: 'Short, punchy mixes, loops on builds, hard cuts on clashes.' },
   ambient: { label: 'Ambient washes', about: 'Long smooth crossfades with filters and reverb tails.' },
 };
@@ -289,6 +308,12 @@ export interface DjSetTrack {
   /** Camelot label like "8A", or null when the key is unknown. */
   camelot: string | null;
   energy: number | null;
+  /** Audio features used by the transition rules and the AI pass (0–1, null when unknown). */
+  valence: number | null;
+  danceability: number | null;
+  instrumentalness: number | null;
+  acousticness: number | null;
+  tags: string[];
   targetEnergy: number;
   locked: boolean;
 }
@@ -304,8 +329,48 @@ export interface DjTransition {
   /** Energy of next minus energy of this track; null when one is unknown. */
   energyDelta: number | null;
   reason: string;
+  /** Spotify will likely show no bar choice (no clear beat grid): skip the bars then. */
+  barsMayBeHidden: boolean;
+  /** The AI pass's version, if one ran. `settings` equals it until the user edits. */
+  ai: { settings: TransitionSettings; reason: string; agent: AgentCli } | null;
   /** The user has set this transition in Spotify (only for created sets). */
   applied: boolean;
+}
+
+// ---- AI pass ------------------------------------------------------------------
+// The server runs the user's own agent CLI headless (ADR 0004): no API key in
+// the app, no tools for the agent, JSON in and out, every value validated.
+
+export type AgentCli = 'claude' | 'codex' | 'gemini';
+
+/** GET /api/dj/ai-pass/agents */
+export interface AiPassAgents {
+  /** CLIs found on PATH, in preference order. */
+  available: AgentCli[];
+  /** The one the button will use (AGENT_CLI env wins), or null when none is installed. */
+  selected: AgentCli | null;
+}
+
+/** POST /api/dj/ai-pass — for a preview send tracks + transitions; for a saved set send setId. */
+export interface AiPassRequest {
+  setId?: string;
+  tracks?: DjSetTrack[];
+  transitions?: DjTransition[];
+  config?: DjSetConfig;
+  /** Optional wish from the user, e.g. "more echo, darker". */
+  focus?: string;
+}
+
+/** Result of an AI pass job (GET /api/dj/ai-pass/:jobId). */
+export interface AiPassResult {
+  agent: AgentCli;
+  /** One entry per pair the AI changed or confirmed; index = transition index. */
+  transitions: { index: number; settings: TransitionSettings; reason: string }[];
+  /** Pairs whose AI values failed validation and kept the rule version. */
+  rejected: { index: number; problem: string }[];
+  /** For a saved set: the updated record (AI values already stored). */
+  set: DjSetRecord | null;
+  summary: string;
 }
 
 export interface DjScore {

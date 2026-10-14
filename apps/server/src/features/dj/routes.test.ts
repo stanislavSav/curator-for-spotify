@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DJ_CONFIG,
   DJ_PLAYLIST_DESCRIPTION,
+  type AiPassAgents,
+  type AiPassResult,
   type DjPoolOptions,
   type DjSetRecord,
   type DjSetResult,
@@ -12,10 +14,11 @@ import {
 import { openDb, type DB } from '../../db/db.ts';
 import { getJob } from '../../jobs/jobs.ts';
 import { SpotifyClient } from '../../spotify/client.ts';
-import { makeDjRoutes } from './routes.ts';
+import type { RunAgent } from './ai-pass/run.ts';
+import { makeDjRoutes, NO_AGENT_MESSAGE } from './routes.ts';
 import { config, seedLibrary } from './test-helpers.ts';
 
-function setup() {
+function setup(ai: { agents?: () => AiPassAgents; runAgent?: RunAgent } = {}) {
   const db = openDb(':memory:');
   db.prepare(
     `INSERT INTO auth (id, access_token, refresh_token, expires_at, scope, authorized_at) VALUES (1, 'tok', 'r', ?, '', ?)`,
@@ -42,7 +45,7 @@ function setup() {
     return new Response(JSON.stringify({ snapshot_id: 'x' }), { status: 201 });
   }) as typeof fetch;
   const client = new SpotifyClient(db, fakeFetch, 0);
-  const app = makeDjRoutes({ db: () => db, client: () => client });
+  const app = makeDjRoutes({ db: () => db, client: () => client, ...ai });
   return { db, app, calls };
 }
 
@@ -247,19 +250,154 @@ describe('dj routes', () => {
     expect(list[0]).toMatchObject({ id: 'old', tracks: 3, applied: 0 });
 
     const one = (await (await app.request('/sets/old')).json()) as DjSetRecord;
-    expect(one.config.transitions).toEqual({ sheetStyle: 'balanced', defaultBars: 8, rules: DEFAULT_DJ_CONFIG.transitions.rules });
+    expect(one.config.transitions).toEqual({ sheetStyle: 'balanced', colour: 'medium', defaultBars: 8, rules: DEFAULT_DJ_CONFIG.transitions.rules });
+    // Old tracks have no instrumentalness, so they count as vocal: no long overlap.
     expect(one.result.transitions[0]).toMatchObject({
-      settings: { preset: 'Custom', bars: 8, volume: 'Overlap', eq: 'Center bass swap' },
+      settings: { preset: 'Custom', bars: 8, volume: 'Crossfade', eq: '3-band fade' },
       keyRelation: 'adjacent',
+      barsMayBeHidden: false,
+      ai: null,
       applied: false,
     });
+    expect(one.result.tracks[0]).toMatchObject({ instrumentalness: null, tags: [] });
     expect(one.result.transitions[0]).not.toHaveProperty('eqHint');
     expect(one.result.transitions[1]!.settings.preset).toBe('Auto');
 
     const ticked = (await (await app.request('/sets/old/transitions/1', patch({ applied: true }))).json()) as DjSetRecord;
     expect(ticked.applied).toBe(1);
     const stored = JSON.parse((db.prepare(`SELECT result_json FROM dj_sets WHERE id = 'old'`).get() as { result_json: string }).result_json) as DjSetResult;
-    expect(stored.transitions[0]!.settings.volume).toBe('Overlap');
+    expect(stored.transitions[0]!.settings.volume).toBe('Crossfade');
     expect(stored.transitions[1]!.applied).toBe(true);
+  });
+});
+
+describe('AI pass routes', () => {
+  const CLAUDE: AiPassAgents = { available: ['claude', 'codex'], selected: 'claude' };
+  const AI: TransitionSettings = {
+    preset: 'Custom',
+    bars: 4,
+    volume: 'Fade in fade out',
+    eq: '3-band fade',
+    filter: 'Low pass filter out',
+    effects: 'Echo ¾ out end',
+    looping: 'None',
+  };
+  /** Answers like `claude --output-format json`: every pair gets AI, except pair 3 has an unknown EQ. */
+  const fakeClaude = (prompts: string[]): RunAgent => async (_cli, prompt) => {
+    prompts.push(prompt);
+    const pairs = Number(/Set: \d+ tracks, (\d+) transitions/.exec(prompt)![1]);
+    const transitions = Array.from({ length: pairs }, (_, index) => ({ index, ...AI, ...(index === 3 ? { eq: 'Bass boost' } : {}), reason: `AI reason ${index}` }));
+    return JSON.stringify({ type: 'result', is_error: false, result: '```json\n' + JSON.stringify({ summary: 'Darker and smoother.', transitions }) + '\n```' });
+  };
+
+  async function finish(app: ReturnType<typeof setup>['app'], db: DB, res: Response) {
+    expect(res.status).toBe(202);
+    const job = (await res.json()) as Job;
+    expect(job.kind).toBe('dj-ai-pass');
+    const done = await waitForJob(db, job.id);
+    return { done, res: await app.request(`/ai-pass/${job.id}`) };
+  }
+
+  it('GET /ai-pass/agents lists the CLIs', async () => {
+    const { app } = setup({ agents: () => CLAUDE });
+    expect(await (await app.request('/ai-pass/agents')).json()).toEqual(CLAUDE);
+  });
+
+  it('POST /ai-pass without a CLI answers 400 with the install hint', async () => {
+    const { app } = setup({ agents: () => ({ available: [], selected: null }) });
+    const preview = (await (await app.request('/preview', post({ config: poolCfg(4), seed: 1 }))).json()) as DjSetResult;
+    const res = await app.request('/ai-pass', post({ tracks: preview.tracks, transitions: preview.transitions }));
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe(NO_AGENT_MESSAGE);
+  });
+
+  it('validates the request', async () => {
+    const { app } = setup({ agents: () => CLAUDE, runAgent: fakeClaude([]) });
+    expect((await app.request('/ai-pass', post({}))).status).toBe(400);
+    expect((await app.request('/ai-pass', post({ setId: 'nope' }))).status).toBe(404);
+    const preview = (await (await app.request('/preview', post({ config: poolCfg(4), seed: 1 }))).json()) as DjSetResult;
+    expect((await app.request('/ai-pass', post({ tracks: preview.tracks, transitions: preview.transitions.slice(1) }))).status).toBe(400);
+  });
+
+  it('a preview pass returns the validated suggestions only', async () => {
+    const prompts: string[] = [];
+    const { app, db } = setup({ agents: () => CLAUDE, runAgent: fakeClaude(prompts) });
+    const preview = (await (await app.request('/preview', post({ config: poolCfg(6), seed: 2 }))).json()) as DjSetResult;
+    expect(preview.tracks[0]).toHaveProperty('instrumentalness');
+    expect(preview.tracks[0]).toHaveProperty('tags');
+    expect(preview.transitions[0]).toMatchObject({ ai: null, barsMayBeHidden: expect.any(Boolean) });
+
+    const { done, res } = await finish(app, db, await app.request('/ai-pass', post({ tracks: preview.tracks, transitions: preview.transitions, config: poolCfg(6), focus: 'darker' })));
+    expect(done).toMatchObject({ status: 'done', message: 'Claude Code reviewed 4 transitions; 1 answer was invalid and kept the rule version.' });
+    const result = (await res.json()) as AiPassResult;
+    expect(result).toMatchObject({ agent: 'claude', summary: 'Darker and smoother.', set: null });
+    expect(result.transitions.map((t) => t.index)).toEqual([0, 1, 2, 4]);
+    expect(result.transitions[0]).toEqual({ index: 0, settings: AI, reason: 'AI reason 0' });
+    expect(result.rejected).toEqual([{ index: 3, problem: 'eq "Bass boost" is not a Spotify option' }]);
+    expect(prompts[0]).toContain("The user's focus: darker");
+    expect(prompts[0]).toContain(`out: ${preview.tracks[0]!.name}`);
+  });
+
+  it('a saved-set pass stores the AI version and keeps the user’s edits', async () => {
+    const { app, db } = setup({ agents: () => CLAUDE, runAgent: fakeClaude([]) });
+    const { setId, result } = await createSet(app, db);
+    await app.request(`/sets/${setId}/transitions/1`, patch({ settings: SLAM }));
+
+    const { res } = await finish(app, db, await app.request('/ai-pass', post({ setId })));
+    const out = (await res.json()) as AiPassResult;
+    const set = out.set!;
+    expect(set.id).toBe(setId);
+    const [t0, t1, , t3] = set.result.transitions;
+    expect(t0).toMatchObject({ settings: AI, suggested: result.transitions[0]!.suggested, ai: { settings: AI, reason: 'AI reason 0', agent: 'claude' } });
+    expect(t1).toMatchObject({ settings: SLAM, ai: { settings: AI } });
+    expect(t3).toMatchObject({ settings: result.transitions[3]!.suggested, ai: null });
+
+    const stored = (await (await app.request(`/sets/${setId}`)).json()) as DjSetRecord;
+    expect(stored.result.transitions[0]!.ai?.agent).toBe('claude');
+
+    // A second pass replaces the AI version where the user kept it.
+    const again = await finish(app, db, await app.request('/ai-pass', post({ setId })));
+    expect(((await again.res.json()) as AiPassResult).set!.result.transitions[0]!.settings).toEqual(AI);
+  });
+
+  it('answers 409 while a pass runs, and fails the job on an answer without JSON', async () => {
+    let release: (v: string) => void = () => {};
+    const { app, db } = setup({ agents: () => CLAUDE, runAgent: () => new Promise<string>((r) => (release = r)) });
+    const preview = (await (await app.request('/preview', post({ config: poolCfg(4), seed: 1 }))).json()) as DjSetResult;
+    const body = post({ tracks: preview.tracks, transitions: preview.transitions });
+    const first = await app.request('/ai-pass', body);
+    expect(first.status).toBe(202);
+    const job = (await first.json()) as Job;
+    expect((await app.request(`/ai-pass/${job.id}`)).status).toBe(404);
+    expect((await app.request('/ai-pass', body)).status).toBe(409);
+
+    release('Sorry, I cannot do that.');
+    const done = await waitForJob(db, job.id);
+    expect(done.status).toBe('failed');
+    expect(done.error).toMatch(/did not answer with the JSON/);
+    const res = await app.request(`/ai-pass/${job.id}`);
+    expect(res.status).toBe(404);
+    expect(((await res.json()) as { error: string }).error).toMatch(/did not answer with the JSON/);
+    expect((await app.request('/ai-pass/unknown-job')).status).toBe(404);
+  });
+
+  it('reads stored 16-bar transitions as 8 and accepts them in a new set', async () => {
+    const { app, db } = setup();
+    const { setId, result } = await createSet(app, db);
+    const stored = JSON.parse((db.prepare('SELECT result_json FROM dj_sets WHERE id = ?').get(setId) as { result_json: string }).result_json) as DjSetResult;
+    const custom = stored.transitions.findIndex((t) => t.settings.preset === 'Custom');
+    stored.transitions[custom]!.settings.bars = 16 as TransitionSettings['bars'];
+    for (const t of stored.transitions) delete (t as Partial<typeof t>).barsMayBeHidden;
+    db.prepare('UPDATE dj_sets SET result_json = ? WHERE id = ?').run(JSON.stringify(stored), setId);
+
+    const one = (await (await app.request(`/sets/${setId}`)).json()) as DjSetRecord;
+    expect(one.result.transitions[custom]!.settings.bars).toBe(8);
+    expect(one.result.transitions.every((t) => typeof t.barsMayBeHidden === 'boolean')).toBe(true);
+
+    const old = structuredClone(result);
+    old.transitions[custom]!.suggested.bars = 16 as TransitionSettings['bars'];
+    const cfg = { ...poolCfg(6), transitions: { ...poolCfg(6).transitions, defaultBars: 16 } };
+    const res = await app.request('/sets', post({ name: 'Old bars', config: cfg, result: old }));
+    expect(res.status).toBe(202);
   });
 });

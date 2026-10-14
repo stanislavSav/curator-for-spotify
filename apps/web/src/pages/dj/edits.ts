@@ -16,7 +16,14 @@ export function sameSettings(a: TransitionSettings, b: TransitionSettings): bool
   return a.preset === b.preset && a.bars === b.bars && SETTING_KEYS.every((k) => a[k] === b[k]);
 }
 
-export const isEdited = (t: DjTransition) => !sameSettings(t.settings, t.suggested);
+/** The pair holds the AI pass's values (they may equal the rules'). */
+export const fromAi = (t: DjTransition) => t.ai != null && sameSettings(t.settings, t.ai.settings);
+
+/** The AI pass suggested something other than the rules. */
+export const aiDiffers = (t: DjTransition) => t.ai != null && !sameSettings(t.ai.settings, t.suggested);
+
+/** The user changed this pair: it matches neither the rules nor the AI pass. */
+export const isEdited = (t: DjTransition) => !sameSettings(t.settings, t.suggested) && !fromAi(t);
 
 /** Starting values when the user switches a pair to Custom and nothing better is known. */
 const CUSTOM_START = {
@@ -81,31 +88,35 @@ export function pairTitle(index: number, s: TransitionSettings): string {
   return [`${index + 1} → ${index + 2}`, s.bars ? `${s.bars} bars` : null, s.preset].filter(Boolean).join(' · ');
 }
 
-const pairKey = (r: DjSetResult, i: number) => `${r.tracks[i]?.id}>${r.tracks[i + 1]?.id}`;
+export const pairKey = (r: DjSetResult, i: number) => `${r.tracks[i]?.id}>${r.tracks[i + 1]?.id}`;
 
 /**
- * Moves the user's edits from the previous preview onto a fresh one. An edit
- * stays when the same two tracks still follow each other; the rest are dropped
- * and counted, so the page can say so.
+ * Moves the user's edits and the AI pass's values from the previous preview
+ * onto a fresh one. They stay when the same two tracks still follow each
+ * other. Lost user edits are counted, so the page can say so.
  */
 export function carryEdits(
   prev: DjSetResult | null,
   next: DjSetResult,
 ): { result: DjSetResult; kept: number; dropped: number } {
   if (!prev) return { result: next, kept: 0, dropped: 0 };
-  const edits = new Map<string, TransitionSettings>();
+  const carry = new Map<string, { settings: TransitionSettings; ai: DjTransition['ai']; edited: boolean }>();
   prev.transitions.forEach((t, i) => {
-    if (isEdited(t)) edits.set(pairKey(prev, i), t.settings);
+    const edited = isEdited(t);
+    if (edited || t.ai) carry.set(pairKey(prev, i), { settings: t.settings, ai: t.ai, edited });
   });
-  if (edits.size === 0) return { result: next, kept: 0, dropped: 0 };
+  if (carry.size === 0) return { result: next, kept: 0, dropped: 0 };
   let kept = 0;
   const transitions = next.transitions.map((t, i) => {
-    const s = edits.get(pairKey(next, i));
-    if (!s) return t;
-    kept++;
-    return { ...t, settings: s };
+    const c = carry.get(pairKey(next, i));
+    if (!c) return t;
+    if (c.edited) kept++;
+    // A pair still on the rules takes the fresh rules; one on the AI or edited keeps its values.
+    const keepSettings = c.edited || (c.ai != null && sameSettings(c.settings, c.ai.settings));
+    return { ...t, ai: c.ai, settings: keepSettings ? c.settings : t.settings };
   });
-  return { result: { ...next, transitions }, kept, dropped: edits.size - kept };
+  const edits = [...carry.values()].filter((c) => c.edited).length;
+  return { result: { ...next, transitions }, kept, dropped: edits - kept };
 }
 
 export const appliedCount = (r: DjSetResult) => r.transitions.filter((t) => t.applied).length;

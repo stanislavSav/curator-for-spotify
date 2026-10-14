@@ -6,16 +6,24 @@ import {
   LOOPING_OPTIONS,
   MIX_PRESETS,
   SHEET_STYLES,
+  TRANSITION_COLOURS,
   VOLUME_OPTIONS,
+  toBars,
   normaliseDjConfig,
   type DjCreateRequest,
   type DjPreviewRequest,
   type DjSetConfig,
   type DjSetResult,
   type DjTransitionPatch,
+  type AgentCli,
+  type AiPassRequest,
   type SheetStyle,
+  type TransitionColour,
   type TransitionSettings,
 } from '@curator/shared';
+
+/** Agent CLIs in preference order (ADR 0004). */
+export const AGENT_CLIS = ['claude', 'codex', 'gemini'] as const satisfies readonly AgentCli[];
 
 const energy = z.number().min(0).max(1);
 const bpm = z.number().min(30).max(300);
@@ -60,7 +68,9 @@ export const djSetConfigSchema = z.object({
   excludedTrackIds: z.array(id).max(2000),
   transitions: z.object({
     sheetStyle: z.enum(Object.keys(SHEET_STYLES) as [SheetStyle, ...SheetStyle[]]),
-    defaultBars: z.union([z.literal(4), z.literal(8), z.literal(16)]),
+    colour: z.enum(Object.keys(TRANSITION_COLOURS) as [TransitionColour, ...TransitionColour[]]),
+    // Older configs allowed 16; incomingConfig normalises that to 8 first.
+    defaultBars: z.union([z.literal(4), z.literal(8)]),
     rules: z.object({
       longBlendWhenCompatible: z.boolean(),
       riseOnEnergyJump: z.boolean(),
@@ -73,7 +83,7 @@ export const djSetConfigSchema = z.object({
 /** Older or partial configs (stored sets, localStorage) are filled up to the current shape first. */
 const incomingConfig = z.preprocess((v) => (v && typeof v === 'object' ? normaliseDjConfig(v) : v), djSetConfigSchema);
 
-const djSetTrackSchema = z.object({
+export const djSetTrackSchema = z.object({
   id,
   uri: z.string().regex(/^spotify:track:[A-Za-z0-9]+$/, 'track uri must look like spotify:track:…'),
   name: z.string(),
@@ -82,11 +92,18 @@ const djSetTrackSchema = z.object({
   bpm: z.number(),
   camelot: z.string().nullable(),
   energy: z.number().nullable(),
+  // Added in task 007; older stored sets and clients do not send them.
+  valence: z.number().nullable().default(null),
+  danceability: z.number().nullable().default(null),
+  instrumentalness: z.number().nullable().default(null),
+  acousticness: z.number().nullable().default(null),
+  tags: z.array(z.string().max(100)).max(20).default([]),
   targetEnergy: z.number(),
   locked: z.boolean(),
 });
 
-const bars = z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)]);
+/** Spotify offers 2, 4 or 8 bars. Older sets stored 16, which reads as 8. */
+const bars = z.preprocess((v) => (v === 16 ? toBars(v) : v), z.union([z.literal(2), z.literal(4), z.literal(8)]));
 
 /** Every value must be one of Spotify's exact option names (shared lists). */
 export const transitionSettingsSchema = z.object({
@@ -99,13 +116,18 @@ export const transitionSettingsSchema = z.object({
   looping: z.enum(LOOPING_OPTIONS).nullable(),
 }) satisfies z.ZodType<TransitionSettings>;
 
-const djTransitionSchema = z.object({
+export const djTransitionSchema = z.object({
   settings: transitionSettingsSchema,
   suggested: transitionSettingsSchema,
   bpmDeltaPct: z.number(),
   keyRelation: z.enum(['same', 'adjacent', 'relative', 'energy-boost', 'clash', 'unknown']),
   energyDelta: z.number().nullable(),
   reason: z.string(),
+  barsMayBeHidden: z.boolean().default(false),
+  ai: z
+    .object({ settings: transitionSettingsSchema, reason: z.string().max(500), agent: z.enum(AGENT_CLIS) })
+    .nullable()
+    .default(null),
   applied: z.boolean().default(false),
 });
 
@@ -149,3 +171,17 @@ export const djCreateSchema = z.object({
 export const djTransitionPatchSchema = z
   .object({ settings: transitionSettingsSchema.optional(), applied: z.boolean().optional() })
   .refine((p) => p.settings !== undefined || p.applied !== undefined, 'Send settings, applied or both') satisfies z.ZodType<DjTransitionPatch>;
+
+/** POST /api/dj/ai-pass: a saved set by id, or a preview's tracks and transitions. */
+export const aiPassRequestSchema = z
+  .object({
+    setId: id.optional(),
+    tracks: z.array(djSetTrackSchema).min(2).max(300).optional(),
+    transitions: z.array(djTransitionSchema).optional(),
+    config: incomingConfig.optional(),
+    focus: z.string().max(300).optional(),
+  })
+  .refine(
+    (r) => r.setId != null || (r.tracks != null && r.transitions != null && r.transitions.length === r.tracks.length - 1),
+    'Send setId, or tracks with one transition per track pair',
+  ) satisfies z.ZodType<AiPassRequest>;

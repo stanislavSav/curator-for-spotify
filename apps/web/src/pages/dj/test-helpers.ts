@@ -11,6 +11,11 @@ export const track = (id: string, name: string, artist: string, bpm = 124, camel
   bpm,
   camelot,
   energy: 0.6,
+  valence: 0.5,
+  danceability: 0.7,
+  instrumentalness: null,
+  acousticness: null,
+  tags: [],
   targetEnergy: 0.6,
   locked: false,
 });
@@ -34,6 +39,8 @@ export const transition = (settings: TransitionSettings = CUSTOM, extra: Partial
   keyRelation: 'same',
   energyDelta: 0.1,
   reason: 'Same key and tempo.',
+  barsMayBeHidden: false,
+  ai: null,
   applied: false,
   ...extra,
 });

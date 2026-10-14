@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DjLibraryFilter } from '@curator/shared';
 import { openDb } from '../../db/db.ts';
 import { getLibraryTracks } from '../../db/library.ts';
-import { buildCandidates, inBpmRange, matchesLibraryFilter, poolOptions, selectPool } from './pool.ts';
+import { buildCandidates, inBpmRange, matchesLibraryFilter, poolOptions, selectPool, toCandidate } from './pool.ts';
 import { config, libTrack, seedLibrary } from './test-helpers.ts';
 
 const filter = (over: Partial<DjLibraryFilter> = {}): DjLibraryFilter => ({
@@ -113,5 +113,20 @@ describe('poolOptions', () => {
     expect(o.bpmHistogram).toEqual([{ bpm: 120, count: 2 }]);
     expect(o.decades).toEqual([{ decade: 2010, count: 3 }]);
     expect(o.library).toMatchObject({ tracks: 3, withBpm: 2, liked: 3 });
+  });
+});
+
+describe('toCandidate', () => {
+  it('carries the audio features and the top 6 tags for the transition rules', () => {
+    const base = libTrack('x', { tags: ['house', 'deep house', 'electronic', 'dance', 'chill', 'lounge', 'downtempo'] });
+    const t = { ...base, features: { ...base.features!, valence: 0.4, danceability: 0.8, instrumentalness: 0.9, acousticness: 0.05 } };
+    expect(toCandidate(t)).toMatchObject({
+      valence: 0.4,
+      danceability: 0.8,
+      instrumentalness: 0.9,
+      acousticness: 0.05,
+      tags: ['house', 'deep house', 'electronic', 'dance', 'chill', 'lounge'],
+    });
+    expect(toCandidate(libTrack('y'))).toMatchObject({ valence: null, danceability: null, instrumentalness: null, acousticness: null, tags: [] });
   });
 });

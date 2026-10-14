@@ -4,6 +4,7 @@ import {
   curvePoints,
   curveTarget,
   SHEET_STYLES,
+  TRANSITION_COLOURS,
   type CurvePreset,
   type DjCurve,
   type DjLibraryFilter,
@@ -12,6 +13,7 @@ import {
   type DjTransitionRules,
   type SheetStyle,
   type TimeRange,
+  type TransitionColour,
 } from '@curator/shared';
 import { cx } from '../../components/ui.tsx';
 import {
@@ -58,7 +60,7 @@ const RULES: { id: keyof DjTransitionRules; label: string }[] = [
   { id: 'autoWhenUnknown', label: 'Leave on Auto when a key is unknown' },
 ];
 
-const BARS_NOTE = 'Bars are a length to aim for. Spotify sets the exact length of each transition.';
+const BARS_NOTE = 'Bars are a length to aim for, up to 8. Spotify sets the exact length, and shows no bar choice when it finds no clear beat.';
 
 type SectionId = 'pool' | 'shape' | 'tempo' | 'key' | 'transitions' | 'advanced';
 
@@ -208,14 +210,27 @@ export function ConfigPanel({ config, onChange, options, usable, footer }: Props
             </div>
             <p className="mt-1 text-xs text-zinc-400">{SHEET_STYLES[tr.sheetStyle].about}</p>
           </div>
+          <div>
+            <div className="mb-1 text-xs text-zinc-500">Colour: how many filters, effects and loops clean blends get.</div>
+            <Segmented
+              value={tr.colour}
+              options={(Object.keys(TRANSITION_COLOURS) as TransitionColour[]).map((id) => ({
+                value: id,
+                label: TRANSITION_COLOURS[id].label,
+                title: TRANSITION_COLOURS[id].about,
+              }))}
+              onChange={(colour) => setTr({ colour })}
+            />
+            <p className="mt-1 text-xs text-zinc-400">{TRANSITION_COLOURS[tr.colour].about}</p>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-zinc-300" title={BARS_NOTE}>
               Default length
             </span>
             <Segmented
               value={String(tr.defaultBars)}
-              options={['4', '8', '16'].map((b) => ({ value: b, label: `${b} bars`, title: BARS_NOTE }))}
-              onChange={(b) => setTr({ defaultBars: Number(b) as 4 | 8 | 16 })}
+              options={['4', '8'].map((b) => ({ value: b, label: `${b} bars`, title: BARS_NOTE }))}
+              onChange={(b) => setTr({ defaultBars: b === '4' ? 4 : 8 })}
             />
           </div>
         </Section>

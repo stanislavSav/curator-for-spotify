@@ -3,6 +3,7 @@ import {
   BAR_OPTIONS,
   MIX_PRESETS,
   SETTING_ROWS,
+  toBars,
   type DjSetTrack,
   type DjTransition,
   type KeyRelation,
@@ -10,6 +11,8 @@ import {
   type TransitionSettings,
 } from '@curator/shared';
 import { Badge, cx } from '../../components/ui.tsx';
+import { BARS_HINT, barsNote, pairHints } from './ai.ts';
+import { AiBadge, RulesVsAi } from './AiPass.tsx';
 import { isEdited, pairTitle, presetHasBars, presetLine, rowValue, withPreset } from './edits.ts';
 import { fmtEnergyDelta, fmtPct } from './sheet.ts';
 
@@ -22,7 +25,7 @@ export const RELATION: Record<KeyRelation, { label: string; tone: 'good' | 'info
   unknown: { label: 'key ?', tone: 'neutral', about: 'At least one key is unknown.' },
 };
 
-const BARS_NOTE = 'Bars are a length to aim for. Spotify sets the exact length of each transition.';
+const BARS_NOTE = 'Bars are a length to aim for, up to 8. Spotify sets the exact length, and shows no bar choice when it finds no clear beat.';
 
 export interface PairProps {
   index: number;
@@ -71,6 +74,7 @@ export function TransitionCard({ defaultBars, onChange, onApplied, ...pair }: Ca
               edited
             </Badge>
           )}
+          <AiBadge transition={tr} />
           {done && <Badge tone="good">✓ applied</Badge>}
         </div>
         {onChange && (
@@ -80,7 +84,7 @@ export function TransitionCard({ defaultBars, onChange, onApplied, ...pair }: Ca
                 className="rounded-full px-3 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
                 onClick={() => onChange(tr.suggested)}
               >
-                Reset to suggestion
+                Reset to rules
               </button>
             )}
             <button
@@ -95,6 +99,9 @@ export function TransitionCard({ defaultBars, onChange, onApplied, ...pair }: Ca
           </div>
         )}
       </header>
+      <div className="mb-3 empty:hidden">
+        <RulesVsAi transition={tr} onChange={onChange} />
+      </div>
       <TransitionBody {...pair} onChange={editing ? onChange : undefined} defaultBars={defaultBars} />
     </article>
   );
@@ -115,15 +122,17 @@ export function TransitionBody({
   const p = presetLine(s.preset);
   const rel = RELATION[tr.keyRelation];
   const named = s.preset !== 'Custom' && presetHasBars(s.preset);
+  const note = barsNote(tr);
+  const hints = pairHints(from, to);
   return (
     <div className={cx('space-y-3', large && 'space-y-5')}>
       <div className="space-y-1">
         <TrackLine track={from} role="out" n={index + 1} large={large} />
-        <div className="flex justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-x-2">
           {onChange ? (
             <select
               aria-label="Bars"
-              value={s.bars ?? ''}
+              value={toBars(s.bars) ?? ''}
               disabled={!presetHasBars(s.preset)}
               onChange={(e) => onChange({ ...s, bars: Number(e.target.value) as TransitionBars })}
               className="rounded-full bg-zinc-800 px-3 py-1 text-sm disabled:opacity-50"
@@ -144,7 +153,13 @@ export function TransitionBody({
               {s.bars ? `${s.bars} bars` : s.preset === 'No transition' ? 'no overlap' : 'Spotify decides'}
             </span>
           )}
+          {s.bars != null && !note && <span className={cx('text-zinc-500', large ? 'text-sm' : 'text-xs')}>{BARS_HINT}</span>}
         </div>
+        {note && (
+          <p className={cx('text-center text-amber-300', large ? 'text-base' : 'text-xs')} role="note">
+            {note}
+          </p>
+        )}
         <TrackLine track={to} role="in" n={index + 2} large={large} />
       </div>
 
@@ -227,8 +242,18 @@ export function TransitionBody({
             energy {fmtEnergyDelta(tr.energyDelta)}
           </Badge>
         )}
+        {hints.map((h) => (
+          <Badge key={h.label} tone="neutral" title={h.about}>
+            {h.label}
+          </Badge>
+        ))}
       </div>
       <p className={cx('text-zinc-400', large ? 'text-base' : 'text-xs')}>{tr.reason}</p>
+      {tr.ai && tr.ai.reason && (
+        <p className={cx('text-zinc-300', large ? 'text-base' : 'text-xs')}>
+          <span className="font-semibold">✦ AI:</span> {tr.ai.reason}
+        </p>
+      )}
     </div>
   );
 }

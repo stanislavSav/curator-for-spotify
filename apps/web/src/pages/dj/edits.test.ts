@@ -13,11 +13,11 @@ describe('withPreset', () => {
 
   it('keeps bars but nulls the rows for another named preset', () => {
     expect(withPreset(CUSTOM, 'Fade', CUSTOM)).toEqual({ ...AUTO, preset: 'Fade', bars: 8 });
-    expect(withPreset(AUTO, 'Rise', AUTO, 16).bars).toBe(16);
+    expect(withPreset(AUTO, 'Rise', AUTO, 4).bars).toBe(4);
   });
 
   it('fills Custom from the suggestion, or from plain starting values', () => {
-    const suggested = { ...CUSTOM, bars: 16 as const, filter: 'High pass filter in' as const };
+    const suggested = { ...CUSTOM, bars: 2 as const, filter: 'High pass filter in' as const };
     expect(withPreset(AUTO, 'Custom', suggested)).toEqual(suggested);
     const fromAuto = withPreset(AUTO, 'Custom', AUTO, 4);
     expect(fromAuto).toMatchObject({ preset: 'Custom', bars: 4, volume: 'Smooth crossfade', looping: 'None' });

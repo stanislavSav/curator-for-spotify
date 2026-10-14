@@ -17,7 +17,7 @@ Everything runs on your machine. Your library stays in a local SQLite file.
 | 1 | **Analyse** | Syncs Liked Songs, your own playlists, top tracks/artists and recent plays. Adds BPM, key and energy from [ReccoBeats](https://reccobeats.com) and [Deezer](https://developers.deezer.com), and genre tags from [MusicBrainz](https://musicbrainz.org) and [Wikidata](https://www.wikidata.org). |
 | 2 | **Propose** | Your AI agent reads a compact Snapshot of your library and writes named playlist proposals with reasons. No agent? Press **Generate basic proposals**. You approve, edit or drop each one; the app creates the approved ones on Spotify. |
 | 3 | **Prune** | Finds playlists with no recent use, based on your Streaming History export, plays of tracks that only that playlist has, and edit dates. You confirm each one. A backup is saved first and can be restored from the app; Spotify also keeps deleted playlists recoverable for 90 days. |
-| 4 | **DJ Set** | Picks tracks from a pool and orders them by BPM, Camelot key and an energy curve you choose, then creates the playlist. The set rebuilds live as you change settings. A **Transition Sheet** card per pair mirrors Spotify's *Edit transition* panel: preset, bars, and the exact Volume / EQ / Filter / Effects / Looping values to pick. You can edit each card, tick it off as applied, and step through them in a full-screen Apply mode. |
+| 4 | **DJ Set** | Picks tracks from a pool and orders them by BPM, Camelot key and an energy curve you choose, then creates the playlist. The set rebuilds live as you change settings. A **Transition Sheet** card per pair mirrors Spotify's *Edit transition* panel: preset, bars, and the exact Volume / EQ / Filter / Effects / Looping values to pick. Suggestions come from a rule engine that uses key, tempo, energy, vocals/instrumental, acousticness and position in the set, with a **Colour** setting (subtle / medium / bold). Press **✦ AI pass** to have your own AI agent review the sheet. You can edit each card, tick it off as applied, and step through them in a full-screen Apply mode. |
 
 ## Before you start
 
@@ -123,7 +123,7 @@ Spotify Web API ──sync──▶ SQLite (data/curator.sqlite) ◀──enrich
   | MusicBrainz | ISRC codes, Spotify artist page URLs, artist names |
   | Wikidata | Spotify artist IDs |
 
-- Your AI agent reads `data/snapshot.json` on your machine. What your agent's provider does with that data depends on the agent you use.
+- Your AI agent reads `data/snapshot.json` on your machine. The **✦ AI pass** on the DJ page runs your installed agent CLI (Claude Code, Codex or Gemini CLI) with the set's track names, artists and audio features as text, without tools. What your agent's provider does with that data depends on the agent you use.
 - `npm run check:public` and a pre-commit hook block commits of `data/`, `.env`, snapshots, proposals, databases and likely secrets. Put your own names, emails or playlist names in `.private-markers` (git-ignored) to block those too.
 
 ## Commands
@@ -138,7 +138,7 @@ Spotify Web API ──sync──▶ SQLite (data/curator.sqlite) ◀──enrich
 | `npm run snapshot` | Writes `data/snapshot.json` from the command line |
 | `npm run validate-proposals` | Checks `data/proposals.json` against the schema and the database |
 
-Ports can be changed with `PORT` and `WEB_PORT`. For example, `PORT=8797 WEB_PORT=5183 npm run demo` runs the demo next to your real app. If you change `PORT`, update the redirect URI in your Spotify app too.
+The DJ page's **✦ AI pass** uses the first agent CLI it finds (`claude`, `codex`, `gemini`); set `AGENT_CLI` in `.env` to choose. Ports can be changed with `PORT` and `WEB_PORT`. For example, `PORT=8797 WEB_PORT=5183 npm run demo` runs the demo next to your real app. If you change `PORT`, update the redirect URI in your Spotify app too.
 
 ## Limitations
 

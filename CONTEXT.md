@@ -98,6 +98,14 @@ _Avoid_: parameters, knobs
 The flavour of a whole Transition Sheet (Balanced, Smooth & long, Club cuts, Ambient washes) that steers which Transition Settings are suggested.
 _Avoid_: preset, mode
 
+**Transition Colour**:
+How much a Transition Sheet adds filters, effects and loops to clean blends: Subtle, Medium or Bold.
+_Avoid_: spice, intensity
+
+**AI Pass**:
+A one-click review of a DJ Set's Transition Sheet by the user's own Agent, run by the app. Its suggestions show as "AI" and can be kept or reset.
+_Avoid_: auto mix, AI mode
+
 **Set Template**:
 A saved starting point for a DJ Set's settings (for example "Friday warm-up").
 _Avoid_: preset

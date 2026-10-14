@@ -1,5 +1,6 @@
 import { SETTING_ROWS, type DjSetResult, type DjTransition } from '@curator/shared';
-import { isEdited, pairTitle, presetLine, rowValue } from './edits.ts';
+import { barsNote } from './ai.ts';
+import { aiDiffers, fromAi, isEdited, pairTitle, presetLine, rowValue } from './edits.ts';
 
 export const fmtDuration = (ms: number) => {
   const min = Math.round(ms / 60_000);
@@ -21,7 +22,16 @@ export function playedBpm(bpms: number[], fold: boolean): number[] {
   return out;
 }
 
-export const LEGEND = "'in' = incoming track, 'out' = outgoing track. Pick Custom in Spotify, then set each row.";
+export const LEGEND = "'in' = incoming track, 'out' = outgoing track. Pick Custom in Spotify, then set each row. Set the bars if Spotify offers them.";
+
+/** "edited", "AI" and "applied" marks of a pair. */
+export function pairMarks(tr: DjTransition, applied: boolean): string[] {
+  return [
+    isEdited(tr) ? 'edited' : null,
+    fromAi(tr) && aiDiffers(tr) ? 'AI' : null,
+    applied && tr.applied ? 'applied' : null,
+  ].filter((m): m is string => m != null);
+}
 
 export const APPLY_STEPS = [
   'Open the playlist in the Spotify app (phone or desktop).',
@@ -53,9 +63,11 @@ export function sheetAsText(result: DjSetResult, name?: string | null, opts: { a
     lines.push(`${String(i + 1).padStart(2)}. ${t.artists.join(', ')} – ${t.name}  [${t.bpm} BPM · ${t.camelot ?? '?'} · ${energy}]`);
     const tr = result.transitions[i];
     if (!tr) return;
-    const marks = [isEdited(tr) ? 'edited' : null, opts.applied && tr.applied ? 'applied' : null].filter(Boolean);
+    const marks = pairMarks(tr, opts.applied ?? false);
     lines.push(`    → ${pairTitle(i, tr.settings)}${marks.length ? ` (${marks.join(', ')})` : ''}`);
     lines.push(`      ${presetText(tr)}`);
+    const note = barsNote(tr);
+    if (note) lines.push(`      Bars: ${note}`);
     for (const row of SETTING_ROWS) lines.push(`      ${`${row.label}:`.padEnd(9)}${rowValue(tr.settings, row.key)}`);
     lines.push(`      ${tr.reason}`);
   });
@@ -70,8 +82,10 @@ function transitionHtml(tr: DjTransition, i: number, applied: boolean): string {
     (r) => `<tr><td><i style="background:${r.color}"></i>${esc(r.label)}</td><td>${esc(rowValue(tr.settings, r.key))}</td></tr>`,
   ).join('');
   const box = applied ? `<span class="box">${tr.applied ? '☑' : '☐'}</span>` : '';
-  return `${box}<b>${esc(pairTitle(i, tr.settings))}</b>${isEdited(tr) ? ' <small>(edited)</small>' : ''}
-<div>${esc(p.before)}<b>${esc(p.name)}</b>${esc(p.after)}</div><table class="rows">${rows}</table><small>${esc(tr.reason)}</small>`;
+  const marks = pairMarks(tr, false);
+  const note = barsNote(tr);
+  return `${box}<b>${esc(pairTitle(i, tr.settings))}</b>${marks.length ? ` <small>(${esc(marks.join(', '))})</small>` : ''}
+<div>${esc(p.before)}<b>${esc(p.name)}</b>${esc(p.after)}</div>${note ? `<div><small>Bars: ${esc(note)}</small></div>` : ''}<table class="rows">${rows}</table><small>${esc(tr.reason)}</small>`;
 }
 
 /** A standalone, printer-friendly HTML page of the sheet. */

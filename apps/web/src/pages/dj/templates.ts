@@ -15,7 +15,7 @@ export const SET_TEMPLATES: { id: string; label: string; about: string; apply: (
       allowHalfDouble: true,
       keyStrictness: 'relaxed',
       artistSpacing: 4,
-      transitions: { ...c.transitions, sheetStyle: 'smooth', defaultBars: 16 },
+      transitions: { ...c.transitions, sheetStyle: 'smooth', defaultBars: 8 },
     }),
   },
   {
@@ -47,7 +47,7 @@ export const SET_TEMPLATES: { id: string; label: string; about: string; apply: (
       allowHalfDouble: false,
       keyStrictness: 'strict',
       artistSpacing: 5,
-      transitions: { ...c.transitions, sheetStyle: 'ambient', defaultBars: 16 },
+      transitions: { ...c.transitions, sheetStyle: 'ambient', defaultBars: 8 },
     }),
   },
 ];

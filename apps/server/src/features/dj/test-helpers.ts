@@ -14,6 +14,11 @@ export function cand(id: string, bpm: number, cam: [number, 0 | 1] | null, energ
     bpm,
     camelot: cam ? toCamelot(cam[0], cam[1]) : null,
     energy,
+    valence: null,
+    danceability: null,
+    instrumentalness: null,
+    acousticness: null,
+    tags: [],
   };
 }
 

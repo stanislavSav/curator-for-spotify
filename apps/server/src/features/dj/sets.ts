@@ -9,11 +9,13 @@ import {
   type DjSetTrack,
   type DjTransition,
   type DjTransitionPatch,
+  type TransitionSettings,
+  toBars,
 } from '@curator/shared';
 import { nowIso, type DB } from '../../db/db.ts';
 import type { SpotifyClient } from '../../spotify/client.ts';
 import { parseCamelot } from './harmony.ts';
-import { AUTO, suggestTransition } from './transitions.ts';
+import { AUTO, likelyNoBeatGrid, setPositions, suggestTransition, type SetPosition, type TransitionEnd } from './transitions.ts';
 
 interface Row {
   id: string;
@@ -26,21 +28,44 @@ interface Row {
 
 const playlistUrl = (id: string | null) => (id ? `https://open.spotify.com/playlist/${id}` : null);
 
-const end = (t: DjSetTrack) => ({ bpm: t.bpm, camelot: parseCamelot(t.camelot), energy: t.energy });
+const end = (t: DjSetTrack): TransitionEnd => ({ ...t, camelot: parseCamelot(t.camelot) });
+
+/** Tracks saved before task 007 have no audio features or tags. */
+function normaliseTrack(t: DjSetTrack): DjSetTrack {
+  return {
+    ...t,
+    valence: t.valence ?? null,
+    danceability: t.danceability ?? null,
+    instrumentalness: t.instrumentalness ?? null,
+    acousticness: t.acousticness ?? null,
+    tags: t.tags ?? [],
+  };
+}
+
+/** Spotify offers at most 8 bars; sets saved before task 007 may hold 16. */
+const clampSettings = (s: TransitionSettings): TransitionSettings => ({ ...s, bars: toBars(s.bars) });
 
 /**
  * Sets saved before task 006 have transitions without settings (style, bars,
  * eqHint, cutHint). They get fresh suggestions from the stored tracks; when the
- * tracks are missing, Auto.
+ * tracks are missing, Auto. Sets saved before task 007 get bars clamped to 8,
+ * barsMayBeHidden and an empty AI pass.
  */
-function normaliseTransition(raw: unknown, i: number, tracks: DjSetTrack[], cfg: DjSetConfig): DjTransition {
+function normaliseTransition(raw: unknown, i: number, tracks: DjSetTrack[], cfg: DjSetConfig, pos: SetPosition | undefined): DjTransition {
   const t = (raw && typeof raw === 'object' ? raw : {}) as Partial<DjTransition>;
-  if (t.settings && typeof t.settings === 'object') {
-    return { ...t, suggested: t.suggested ?? t.settings, applied: t.applied === true } as DjTransition;
-  }
   const a = tracks[i];
   const b = tracks[i + 1];
-  if (a && b && a.bpm > 0 && b.bpm > 0) return suggestTransition(end(a), end(b), cfg);
+  if (t.settings && typeof t.settings === 'object') {
+    return {
+      ...t,
+      settings: clampSettings(t.settings),
+      suggested: clampSettings(t.suggested ?? t.settings),
+      barsMayBeHidden: t.barsMayBeHidden ?? (a && b ? likelyNoBeatGrid(end(a)) || likelyNoBeatGrid(end(b)) : false),
+      ai: t.ai ? { ...t.ai, settings: clampSettings(t.ai.settings) } : null,
+      applied: t.applied === true,
+    } as DjTransition;
+  }
+  if (a && b && a.bpm > 0 && b.bpm > 0) return suggestTransition(end(a), end(b), cfg, pos);
   return {
     settings: { ...AUTO },
     suggested: { ...AUTO },
@@ -48,6 +73,8 @@ function normaliseTransition(raw: unknown, i: number, tracks: DjSetTrack[], cfg:
     keyRelation: t.keyRelation ?? 'unknown',
     energyDelta: t.energyDelta ?? null,
     reason: t.reason ?? '',
+    barsMayBeHidden: false,
+    ai: null,
     applied: false,
   };
 }
@@ -55,11 +82,12 @@ function normaliseTransition(raw: unknown, i: number, tracks: DjSetTrack[], cfg:
 function toRecord(r: Row): DjSetRecord {
   const config = normaliseDjConfig(JSON.parse(r.config_json));
   const stored = JSON.parse(r.result_json) as DjSetResult;
-  const tracks = stored.tracks ?? [];
+  const tracks = (stored.tracks ?? []).map(normaliseTrack);
+  const positions = setPositions(tracks.map((t) => t.targetEnergy));
   const result: DjSetResult = {
     ...stored,
     tracks,
-    transitions: (stored.transitions ?? []).map((t, i) => normaliseTransition(t, i, tracks, config)),
+    transitions: (stored.transitions ?? []).map((t, i) => normaliseTransition(t, i, tracks, config, positions[i])),
   };
   return {
     id: r.id,
@@ -109,7 +137,11 @@ export function patchDjTransition(db: DB, id: string, index: number, patch: DjTr
     ...(patch.settings ? { settings: patch.settings } : {}),
     ...(patch.applied !== undefined ? { applied: patch.applied } : {}),
   };
-  db.prepare('UPDATE dj_sets SET result_json = ? WHERE id = ?').run(JSON.stringify(set.result), id);
+  return saveDjSetResult(db, id, set.result);
+}
+
+export function saveDjSetResult(db: DB, id: string, result: DjSetResult): DjSetRecord | null {
+  db.prepare('UPDATE dj_sets SET result_json = ? WHERE id = ?').run(JSON.stringify(result), id);
   return getDjSet(db, id);
 }
 

@@ -23,7 +23,7 @@ describe('section summaries', () => {
     expect(tempoSummary(c)).toBe('Any BPM · step ≤ 6 %');
     expect(tempoSummary({ ...c, bpmRange: { min: 118, max: 128 } })).toBe('118–128 BPM · step ≤ 6 %');
     expect(keySummary(c)).toBe('Relaxed (≤ 2)');
-    expect(transitionsSummary(c)).toBe('Balanced · 8 bars');
+    expect(transitionsSummary(c)).toBe('Balanced · Medium colour · 8 bars');
     expect(advancedSummary(c)).toBe('half/double on · artist gap 3 · 4/4 rules');
   });
 

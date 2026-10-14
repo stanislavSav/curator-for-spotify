@@ -13,11 +13,13 @@ import {
 } from '@curator/shared';
 import { api, useJob } from '../api.ts';
 import { Button, Card, Empty, ErrorNote, JobProgress, Stat } from '../components/ui.tsx';
+import { AGENT_NAMES, countAiChanges, mergeAiResult, pairKeys } from './dj/ai.ts';
+import { AiPassBanner, AiPassButton, Spinner } from './dj/AiPass.tsx';
 import { HowToApply, SheetExportButtons } from './dj/ApplyPanel.tsx';
 import { ApplyMode } from './dj/ApplyMode.tsx';
 import { ConfigPanel } from './dj/ConfigPanel.tsx';
 import { appliedCount, editResult } from './dj/edits.ts';
-import { shapeOf, useDjSet, useLivePreview, useNow } from './dj/hooks.ts';
+import { shapeOf, useAiPass, useDjSet, useLivePreview, useNow, type AiTarget } from './dj/hooks.ts';
 import { SetChart } from './dj/SetChart.tsx';
 import { fmtDuration } from './dj/sheet.ts';
 import { rebuiltAgo } from './dj/summaries.ts';
@@ -53,6 +55,35 @@ export function DjPage() {
   const live = useLivePreview(config, seed);
   const built = live.built;
   const saved = useDjSet(viewingId);
+
+  const aiPass = useAiPass((r, target) => {
+    if (target.kind === 'set') {
+      void qc.invalidateQueries({ queryKey: ['dj', 'sets'] });
+      if (!r.set) {
+        void qc.invalidateQueries({ queryKey: ['dj', 'set', target.setId] });
+        return r.transitions.length;
+      }
+      qc.setQueryData(['dj', 'set', target.setId], r.set);
+      return countAiChanges(r.set.result, r);
+    }
+    const changed = built ? countAiChanges(built.result, r, target.keys) : 0;
+    live.edit((res) => mergeAiResult(res, r, target.keys));
+    return changed;
+  });
+  const aiFor = (kind: AiTarget['kind'], setId?: string) => {
+    const t = aiPass.target;
+    const mine = t != null && t.kind === kind && (t.kind === 'preview' || t.setId === setId);
+    const agent = aiPass.agents?.selected;
+    return (
+      <AiPassBanner
+        running={mine && aiPass.running}
+        message={aiPass.message}
+        agentName={agent ? AGENT_NAMES[agent] : 'your AI agent'}
+        banner={mine ? aiPass.banner : null}
+        onDismiss={aiPass.dismiss}
+      />
+    );
+  };
 
   const create = useMutation({
     mutationFn: (req: DjCreateRequest) => api<{ job: Job; setId: string }>('/api/dj/sets', { method: 'POST', json: req }),
@@ -150,6 +181,15 @@ export function DjPage() {
                 onClose={() => view(null)}
                 onUseSettings={() => setConfig(normaliseDjConfig(record.config))}
                 error={saved.error}
+                aiButton={
+                  <AiPassButton
+                    agents={aiPass.agents}
+                    running={aiPass.running}
+                    disabled={record.result.transitions.length === 0}
+                    onRun={(focus) => aiPass.run({ setId: record.id, focus }, { kind: 'set', setId: record.id })}
+                  />
+                }
+                aiBanner={aiFor('set', record.id)}
               />
             ) : (
               <Card>
@@ -187,6 +227,17 @@ export function DjPage() {
                 title="Transition Sheet"
                 actions={
                   <>
+                    <AiPassButton
+                      agents={aiPass.agents}
+                      running={aiPass.running}
+                      disabled={built.result.transitions.length === 0 || stale}
+                      onRun={(focus) =>
+                        aiPass.run(
+                          { tracks: built.result.tracks, transitions: built.result.transitions, config: built.config, focus },
+                          { kind: 'preview', keys: pairKeys(built.result) },
+                        )
+                      }
+                    />
                     <Button variant="ghost" onClick={() => setApplyOpen(true)} disabled={built.result.transitions.length === 0} title="One transition at a time, full screen">
                       Apply mode
                     </Button>
@@ -194,6 +245,7 @@ export function DjPage() {
                   </>
                 }
               >
+                {aiFor('preview')}
                 <p className="mb-3 text-xs text-zinc-500">
                   A suggestion for each pair. Press Edit on a card to change it; your edits go with the playlist when you
                   create it. An edit stays through a rebuild as long as the same two tracks still follow each other.
@@ -281,10 +333,6 @@ export function DjPage() {
       </div>
     </div>
   );
-}
-
-function Spinner() {
-  return <span aria-hidden className="inline-block size-3 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-200" />;
 }
 
 function FooterLine({ label, action, onClick }: { label: string; action: string; onClick: () => void }) {
@@ -432,6 +480,8 @@ function SavedSetView({
   onClose,
   onUseSettings,
   error,
+  aiButton,
+  aiBanner,
 }: {
   record: DjSetRecord;
   justCreated: boolean;
@@ -440,6 +490,8 @@ function SavedSetView({
   onClose: () => void;
   onUseSettings: () => void;
   error: unknown;
+  aiButton: ReactNode;
+  aiBanner: ReactNode;
 }) {
   const config = normaliseDjConfig(record.config);
   const total = record.result.transitions.length;
@@ -482,6 +534,7 @@ function SavedSetView({
         }
         actions={
           <>
+            {aiButton}
             <Button variant="primary" onClick={onApply} disabled={total === 0} title="One transition at a time, full screen">
               Apply mode
             </Button>
@@ -489,6 +542,7 @@ function SavedSetView({
           </>
         }
       >
+        {aiBanner}
         <TransitionSheet
           result={record.result}
           maxBpmStepPct={config.maxBpmStepPct}

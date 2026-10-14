@@ -1,4 +1,4 @@
-import { CURVE_PRESETS, SHEET_STYLES, type DjSetConfig, type KeyStrictness } from '@curator/shared';
+import { CURVE_PRESETS, SHEET_STYLES, TRANSITION_COLOURS, type DjSetConfig, type KeyStrictness } from '@curator/shared';
 
 // One-line summaries for the closed sections of the settings panel.
 
@@ -38,7 +38,7 @@ export const KEY_LABELS: Record<KeyStrictness, string> = { strict: 'Strict (≤ 
 export const keySummary = (c: DjSetConfig) => KEY_LABELS[c.keyStrictness];
 
 export const transitionsSummary = (c: DjSetConfig) =>
-  `${SHEET_STYLES[c.transitions.sheetStyle].label} · ${c.transitions.defaultBars} bars`;
+  `${SHEET_STYLES[c.transitions.sheetStyle].label} · ${TRANSITION_COLOURS[c.transitions.colour].label} colour · ${c.transitions.defaultBars} bars`;
 
 export function advancedSummary(c: DjSetConfig): string {
   const rules = Object.values(c.transitions.rules);

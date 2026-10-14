@@ -70,6 +70,11 @@ export function toCandidate(t: LibraryTrack): DjCandidate | null {
     bpm,
     camelot: toCamelot(t.features?.key, t.features?.mode),
     energy: t.features?.energy ?? null,
+    valence: t.features?.valence ?? null,
+    danceability: t.features?.danceability ?? null,
+    instrumentalness: t.features?.instrumentalness ?? null,
+    acousticness: t.features?.acousticness ?? null,
+    tags: t.tags.slice(0, 6),
   };
 }
 
