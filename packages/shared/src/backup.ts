@@ -92,6 +92,16 @@ export const TableDumpSchema = z.object({
 });
 export type TableDump = z.infer<typeof TableDumpSchema>;
 
+/** The DJ page's current set (dj_workspace, one row). */
+export const DjWorkspaceRowSchema = z.object({
+  config_json: z.string(),
+  seed: z.number().int(),
+  result_json: z.string(),
+  from_draft_json: z.string().nullable(),
+  updated_at: z.string(),
+});
+export type DjWorkspaceRow = z.infer<typeof DjWorkspaceRowSchema>;
+
 export const FullBackupWorkSchema = z.object({
   djTemplates: z.array(DjTemplateRowSchema).default([]),
   djSets: z.array(DjSetRowSchema).default([]),
@@ -101,6 +111,8 @@ export const FullBackupWorkSchema = z.object({
   backups: z.array(BackupRowSchema).default([]),
   pruneLog: z.array(PruneLogRowSchema).default([]),
   backupRestores: z.array(BackupRestoreRowSchema).default([]),
+  /** Restored only when the device has no current DJ set, so an import never replaces work in progress. */
+  djWorkspace: DjWorkspaceRowSchema.nullable().default(null),
 });
 export type FullBackupWork = z.infer<typeof FullBackupWorkSchema>;
 
@@ -218,6 +230,8 @@ export interface ImportKindResult {
 export interface ImportResult {
   counts: Record<ImportKind, ImportKindResult>;
   library: { replaced: boolean; rows: number };
+  /** The DJ page's current set: restored, kept (this device already had one), or not in the backup. */
+  djWorkspace: 'restored' | 'kept-current' | 'none';
   /** Full Backup of the state before the import (relative to the project folder when possible). */
   autoBackup: string;
 }

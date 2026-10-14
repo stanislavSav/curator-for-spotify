@@ -12,6 +12,7 @@ import {
   type ConflictChoice,
   type DjSetRow,
   type DjTemplateRow,
+  type DjWorkspaceRow,
   type FullBackup,
   type FullBackupWork,
   type ImportConflict,
@@ -79,6 +80,10 @@ export function readWork(db: DB, dataDir: string): FullBackupWork {
     backupRestores: all<BackupRestoreRow>(
       'SELECT backup_id, restored_at, action, playlist_id, url FROM backup_restores ORDER BY rowid',
     ),
+    djWorkspace:
+      (db.prepare('SELECT config_json, seed, result_json, from_draft_json, updated_at FROM dj_workspace WHERE id = 1').get() as
+        | DjWorkspaceRow
+        | undefined) ?? null,
   };
 }
 
@@ -409,6 +414,7 @@ export function applyImport(db: DB, backup: FullBackup, opts: ImportOptions = {}
   const autoBackup = writeAutoBackup(db, dataDir, now);
   const counts = emptyCounts();
   let libraryRows = 0;
+  let djWorkspace: ImportResult['djWorkspace'] = 'none';
   const backupFiles: { path: string; json: string; overwrite: boolean }[] = [];
 
   db.transaction(() => {
@@ -565,7 +571,20 @@ export function applyImport(db: DB, backup: FullBackup, opts: ImportOptions = {}
         counts.proposalsFile[pf.status === 'new' ? 'added' : 'replaced']++;
       } else counts.proposalsFile.skipped++;
     }
+
+    // The DJ page's current set: only into an empty workspace, never over work in progress.
+    const ws = backup.work.djWorkspace;
+    if (ws) {
+      const hasCurrent = db.prepare('SELECT 1 FROM dj_workspace WHERE id = 1').get() != null;
+      if (hasCurrent) djWorkspace = 'kept-current';
+      else {
+        db.prepare(
+          'INSERT INTO dj_workspace (id, config_json, seed, result_json, from_draft_json, updated_at) VALUES (1, ?, ?, ?, ?, ?)',
+        ).run(ws.config_json, ws.seed, ws.result_json, ws.from_draft_json, ws.updated_at);
+        djWorkspace = 'restored';
+      }
+    }
   })();
 
-  return { counts, library: { replaced: importLibrary, rows: libraryRows }, autoBackup: displayPath(autoBackup) };
+  return { counts, library: { replaced: importLibrary, rows: libraryRows }, djWorkspace, autoBackup: displayPath(autoBackup) };
 }

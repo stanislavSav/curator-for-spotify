@@ -112,6 +112,26 @@ describe('dj routes', () => {
     expect(((await bad.json()) as { error: string }).error).toMatch(/maxBpmStepPct/);
   });
 
+  it('GET/PUT/DELETE /workspace keeps the current set until it is cleared', async () => {
+    const { app } = setup();
+    const cfg = config({ pool: { playlistIds: ['pl1'], library: null, recent: { short_term: false, medium_term: false, long_term: false } }, length: { mode: 'tracks', count: 8 } });
+    expect(await (await app.request('/workspace')).json()).toBeNull();
+
+    const result = (await (await app.request('/preview', post({ config: cfg, seed: 5 }))).json()) as DjSetResult;
+    const put = await app.request('/workspace', { ...post({ config: cfg, seed: 5, result, fromDraft: null }), method: 'PUT' });
+    expect(put.status).toBe(200);
+    const saved = (await (await app.request('/workspace')).json()) as { seed: number; result: DjSetResult; updatedAt: string };
+    expect(saved.seed).toBe(5);
+    expect(saved.result.tracks.map((t) => t.id)).toEqual(result.tracks.map((t) => t.id));
+    expect(saved.updatedAt).toBeTruthy();
+
+    const bad = await app.request('/workspace', { ...post({ config: cfg, seed: -1, result, fromDraft: null }), method: 'PUT' });
+    expect(bad.status).toBe(400);
+
+    expect((await app.request('/workspace', { method: 'DELETE' })).status).toBe(204);
+    expect(await (await app.request('/workspace')).json()).toBeNull();
+  });
+
   it('POST /sheet recomputes only the transitions, for the same tracks in the same order', async () => {
     const { app } = setup();
     const cfg = config({ pool: { playlistIds: ['pl1'], library: null, recent: { short_term: false, medium_term: false, long_term: false } }, length: { mode: 'tracks', count: 10 } });

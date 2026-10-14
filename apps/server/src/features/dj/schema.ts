@@ -16,6 +16,7 @@ import {
   type DjPreviewRequest,
   type DjTemplateInput,
   type DjSheetRequest,
+  type DjWorkspaceInput,
   type DjSetConfig,
   type DjSetResult,
   type DjTransitionPatch,
@@ -165,6 +166,13 @@ export const djPreviewSchema = z.object({
   config: incomingConfig,
   seed: z.number().int().min(0).max(2 ** 32 - 1),
 }) satisfies z.ZodType<DjPreviewRequest>;
+
+export const djWorkspaceSchema = z.object({
+  config: incomingConfig,
+  seed: z.number().int().min(0).max(2 ** 32 - 1),
+  result: djSetResultSchema,
+  fromDraft: z.object({ id: z.string().min(1).max(64), name: z.string().max(100) }).nullable(),
+}) satisfies z.ZodType<DjWorkspaceInput>;
 
 export const djSheetSchema = z.object({
   tracks: z.array(djSetTrackSchema).min(2, 'A sheet needs at least two tracks'),

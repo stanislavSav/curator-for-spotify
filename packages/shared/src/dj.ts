@@ -463,6 +463,24 @@ export interface DjSetRecord extends DjSetSummary {
   result: DjSetResult;
 }
 
+/**
+ * The DJ page's current set (tracks, Transition Sheet, edits, AI values),
+ * autosaved so it survives page changes and reloads. It changes only through
+ * Generate, Regenerate, Rebuild set or an explicit track action.
+ * GET/PUT/DELETE /api/dj/workspace.
+ */
+export interface DjWorkspaceInput {
+  config: DjSetConfig;
+  seed: number;
+  result: DjSetResult;
+  /** The Draft the builder was opened from, so "Update draft" stays offered. */
+  fromDraft: { id: string; name: string } | null;
+}
+
+export interface DjWorkspace extends DjWorkspaceInput {
+  updatedAt: string;
+}
+
 /** POST /api/dj/drafts — save a DJ Set in the app without creating it on Spotify. */
 export interface DjDraftRequest {
   name: string;

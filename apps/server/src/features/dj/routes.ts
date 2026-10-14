@@ -22,7 +22,9 @@ import {
   djTemplateInputSchema,
   djTemplatePatchSchema,
   djTransitionPatchSchema,
+  djWorkspaceSchema,
 } from './schema.ts';
+import { clearWorkspace, getWorkspace, saveWorkspace } from './workspace.ts';
 import {
   createDjDraftOnSpotify,
   createDjSet,
@@ -78,6 +80,16 @@ export function makeDjRoutes(deps: Deps) {
       const { config, seed } = p.data;
       const { candidates, stats, warnings } = buildCandidates(getLibraryTracks(deps.db()), config);
       return c.json(buildDjSet(candidates, config, seed, stats, warnings));
+    })
+    .get('/workspace', (c) => c.json(getWorkspace(deps.db())))
+    .put('/workspace', async (c) => {
+      const p = await parse(djWorkspaceSchema, c.req);
+      if ('error' in p) return c.json({ error: p.error }, 400);
+      return c.json(saveWorkspace(deps.db(), p.data));
+    })
+    .delete('/workspace', (c) => {
+      clearWorkspace(deps.db());
+      return c.body(null, 204);
     })
     .post('/sheet', async (c) => {
       const p = await parse(djSheetSchema, c.req);

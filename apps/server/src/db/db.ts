@@ -178,6 +178,16 @@ CREATE TABLE IF NOT EXISTS dj_sets (
   updated_at TEXT
 );
 
+-- the DJ page's current set, autosaved (features/dj); one row
+CREATE TABLE IF NOT EXISTS dj_workspace (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  config_json TEXT NOT NULL,
+  seed INTEGER NOT NULL,
+  result_json TEXT NOT NULL,
+  from_draft_json TEXT,
+  updated_at TEXT NOT NULL
+);
+
 -- user Set Templates (features/dj)
 CREATE TABLE IF NOT EXISTS dj_templates (
   id TEXT PRIMARY KEY,

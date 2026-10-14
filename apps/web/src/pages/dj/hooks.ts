@@ -11,6 +11,7 @@ import type {
   DjTemplateInput,
   DjTransition,
   DjTransitionPatch,
+  DjWorkspace,
   Job,
 } from '@curator/shared';
 import { api, useJob } from '../../api.ts';
@@ -37,28 +38,72 @@ export const shapeOf = (c: DjSetConfig) => JSON.stringify({ ...c, lockedTrackIds
 export const sheetOf = (c: DjSetConfig) => JSON.stringify(c.transitions);
 
 const SHEET_DEBOUNCE_MS = 250;
+const SAVE_DEBOUNCE_MS = 600;
+
+export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 /**
- * The preview. The set is built on first load, on a new seed (Regenerate) and
- * when the user asks for it (rebuild); other settings changes never re-pick
- * tracks on their own, they only mark the preview as out of date (dirty).
- * Sheet settings recompute the Transition Sheet for the same tracks in the same
- * order, keeping edits and AI values. Edits on pairs that survive a rebuild are kept.
+ * The DJ page's current set. It is restored from the server when the page
+ * opens (so page changes and reloads never replace it) and autosaved after
+ * every change. Tracks change only on an explicit build: Generate, Regenerate,
+ * Rebuild set, a Set Template or a track action. Other set settings only mark
+ * the set as out of date (dirty). Sheet settings recompute the Transition Sheet
+ * for the same tracks in the same order, keeping edits and AI values.
  */
-export function useLivePreview(config: DjSetConfig, seed: number) {
+export function useLivePreview(
+  config: DjSetConfig,
+  seed: number,
+  fromDraft: DjWorkspace['fromDraft'],
+  onRestore: (w: DjWorkspace) => void,
+) {
   const [built, setBuilt] = useState<Built | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [pending, setPending] = useState(true);
   const [sheetPending, setSheetPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const [buildNo, setBuildNo] = useState(0);
   const configRef = useRef(config);
   configRef.current = config;
+  const seedRef = useRef(seed);
+  seedRef.current = seed;
   const builtRef = useRef(built);
   builtRef.current = built;
+  const onRestoreRef = useRef(onRestore);
+  onRestoreRef.current = onRestore;
   /** Edits and AI values to carry onto the next build instead of the shown preview's (a saved set's). */
   const carryFromRef = useRef<DjSetResult | null>(null);
+  /** What the server already has, so a restore or an unchanged render does not save again. */
+  const savedRef = useRef<string | null>(null);
 
+  // Restore the current set once, when the page opens.
   useEffect(() => {
+    const ctrl = new AbortController();
+    void (async () => {
+      try {
+        const w = await api<DjWorkspace | null>('/api/dj/workspace', { signal: ctrl.signal });
+        if (ctrl.signal.aborted) return;
+        if (w) {
+          savedRef.current = workspaceKey(w.config, w.result, w.fromDraft);
+          setBuilt({ config: w.config, result: w.result, at: Date.parse(w.updatedAt), carried: { kept: 0, dropped: 0 } });
+          setSaveState('saved');
+          onRestoreRef.current(w);
+        }
+      } catch (e) {
+        if (!ctrl.signal.aborted) setError(e);
+      } finally {
+        if (!ctrl.signal.aborted) {
+          setLoaded(true);
+          setPending(false);
+        }
+      }
+    })();
+    return () => ctrl.abort();
+  }, []);
+
+  // Build only when asked (buildNo > 0), never on mount or on a settings change.
+  useEffect(() => {
+    if (buildNo === 0) return;
     const ctrl = new AbortController();
     setPending(true);
     void (async () => {
@@ -66,7 +111,7 @@ export function useLivePreview(config: DjSetConfig, seed: number) {
       try {
         const fresh = await api<DjSetResult>('/api/dj/preview', {
           method: 'POST',
-          json: { config: c, seed },
+          json: { config: c, seed: seedRef.current },
           signal: ctrl.signal,
         });
         if (ctrl.signal.aborted) return;
@@ -83,7 +128,7 @@ export function useLivePreview(config: DjSetConfig, seed: number) {
       }
     })();
     return () => ctrl.abort();
-  }, [buildNo, seed]);
+  }, [buildNo]);
 
   const sheetKey = sheetOf(config);
   useEffect(() => {
@@ -119,21 +164,52 @@ export function useLivePreview(config: DjSetConfig, seed: number) {
     };
   }, [sheetKey, pending]);
 
+  // Autosave the current set (tracks, sheet, edits, AI values, linked draft).
+  useEffect(() => {
+    if (!loaded || !built) return;
+    const key = workspaceKey(built.config, built.result, fromDraft);
+    if (key === savedRef.current) return;
+    setSaveState('saving');
+    const timer = setTimeout(async () => {
+      try {
+        await api('/api/dj/workspace', {
+          method: 'PUT',
+          json: { config: built.config, seed: built.result.seed, result: built.result, fromDraft },
+        });
+        savedRef.current = key;
+        setSaveState('saved');
+      } catch {
+        setSaveState('error');
+      }
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [loaded, built, fromDraft]);
+
   /** Applies an edit to the shown preview (page state only). */
   const edit = (f: (r: DjSetResult) => DjSetResult) => setBuilt((b) => (b ? { ...b, result: f(b.result) } : b));
   /**
-   * Builds the set again from the current settings (same seed). `carryFrom`
-   * (a saved set) gives the edits to keep instead of the shown preview's.
+   * Builds the set from the current settings and seed. `carryFrom` (a saved
+   * set) gives the edits to keep instead of the shown preview's.
    */
   const rebuild = (carryFrom?: DjSetResult) => {
     if (carryFrom) carryFromRef.current = carryFrom;
     setBuildNo((n) => n + 1);
   };
+  /** Drops the current tracklist and Transition Sheet (settings and drafts stay). */
+  const clear = async () => {
+    await api('/api/dj/workspace', { method: 'DELETE' });
+    savedRef.current = null;
+    setBuilt(null);
+    setError(null);
+    setSaveState('idle');
+  };
   /** The shown set was built from other set settings than the current ones. */
   const dirty = built != null && !pending && shapeOf(built.config) !== shapeOf(config);
 
-  return { built, pending, sheetPending, error, edit, rebuild, dirty };
+  return { built, loaded, pending, sheetPending, error, edit, rebuild, clear, dirty, saveState };
 }
+
+const workspaceKey = (c: DjSetConfig, r: DjSetResult, d: DjWorkspace['fromDraft']) => JSON.stringify([c, r, d]);
 
 /** A created set, with optimistic PATCH for edits and Applied ticks. */
 export function useDjSet(id: string | null) {

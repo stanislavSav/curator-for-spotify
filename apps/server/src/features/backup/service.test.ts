@@ -124,6 +124,28 @@ describe('Full Backup import', () => {
     expect(Object.values(again.summary).every((s) => s.new === 0 && s.conflicts === 0)).toBe(true);
   });
 
+  it("restores the DJ page's current set only on a device without one", () => {
+    const a = source();
+    const put = (db: DB, seed: number) =>
+      db
+        .prepare(
+          "INSERT INTO dj_workspace (id, config_json, seed, result_json, from_draft_json, updated_at) VALUES (1, '{}', ?, '{\"tracks\":[]}', NULL, '2026-10-14T10:00:00Z')",
+        )
+        .run(seed);
+    put(a.db, 11);
+    const backup = roundTrip(exportFullBackup(a.db, { includeLibrary: false, dataDir: a.dir }));
+    expect(backup.work.djWorkspace?.seed).toBe(11);
+
+    const empty = { db: openDb(':memory:'), dir: tempDir() };
+    expect(applyImport(empty.db, backup, { dataDir: empty.dir }).djWorkspace).toBe('restored');
+    expect(empty.db.prepare('SELECT seed FROM dj_workspace').get()).toEqual({ seed: 11 });
+
+    const busy = { db: openDb(':memory:'), dir: tempDir() };
+    put(busy.db, 22);
+    expect(applyImport(busy.db, backup, { dataDir: busy.dir }).djWorkspace).toBe('kept-current');
+    expect(busy.db.prepare('SELECT seed FROM dj_workspace').get()).toEqual({ seed: 22 });
+  });
+
   it('remaps Backup ids for the prune log and restores', () => {
     const a = source();
     const backup = roundTrip(exportFullBackup(a.db, { includeLibrary: false, dataDir: a.dir }));

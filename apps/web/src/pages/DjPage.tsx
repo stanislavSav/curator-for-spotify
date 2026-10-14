@@ -60,7 +60,14 @@ export function DjPage() {
 
   const options = useQuery({ queryKey: ['dj', 'pool-options'], queryFn: () => api<DjPoolOptions>('/api/dj/pool-options') });
   const history = useQuery({ queryKey: ['dj', 'sets'], queryFn: () => api<DjSetSummary[]>('/api/dj/sets') });
-  const live = useLivePreview(config, seed);
+  /** The builder's set came from this draft ("Use these settings"), so it can update it. */
+  const [fromDraft, setFromDraft] = useState<{ id: string; name: string } | null>(null);
+  // The current set is restored from the server, with its seed and linked draft.
+  const live = useLivePreview(config, seed, fromDraft, (w) => {
+    setSeed(w.seed);
+    setFromDraft(w.fromDraft);
+  });
+  const [confirmClear, setConfirmClear] = useState(false);
   const built = live.built;
   const saved = useDjSet(viewingId);
 
@@ -93,8 +100,6 @@ export function DjPage() {
     );
   };
 
-  /** The builder's set came from this draft ("Use these settings"), so it can update it. */
-  const [fromDraft, setFromDraft] = useState<{ id: string; name: string } | null>(null);
   const [justCreated, setJustCreated] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState<string | null>(null);
 
@@ -212,19 +217,54 @@ export function DjPage() {
           ) : live.error ? (
             <span className="text-red-300">Rebuild failed</span>
           ) : built ? (
-            `${rebuiltAgo(built.at, now)} · ${built.result.tracks.length} tracks`
+            <span title="The current set is saved automatically, so leaving the page or reloading keeps it.">
+              {`${rebuiltAgo(built.at, now)} · ${built.result.tracks.length} tracks · `}
+              {live.saveState === 'saving' ? 'saving…' : live.saveState === 'error' ? <span className="text-red-300">not saved</span> : 'saved'}
+            </span>
           ) : null}
         </span>
         <Button
           onClick={() => {
             setSeed(randomSeed());
             view(null);
+            live.rebuild();
           }}
+          disabled={!live.loaded || live.pending}
           title="Build again with another random seed. Edits stay on pairs that remain."
         >
-          Regenerate
+          {built ? 'Regenerate' : 'Generate set'}
         </Button>
       </div>
+      {built && !viewingId && (
+        <div className="flex items-center justify-end gap-2 text-xs">
+          {confirmClear ? (
+            <>
+              <span className="text-zinc-400">Drop these tracks and the Transition Sheet?</span>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setConfirmClear(false);
+                  setFromDraft(null);
+                  void live.clear();
+                }}
+              >
+                Clear set
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirmClear(false)}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <button
+              className="text-zinc-500 underline-offset-2 hover:text-zinc-200 hover:underline"
+              onClick={() => setConfirmClear(true)}
+              title="Drop the current tracklist and Transition Sheet. Your settings, templates and drafts stay."
+            >
+              Clear set
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -395,10 +435,15 @@ export function DjPage() {
               <Empty>
                 {live.pending ? (
                   <span className="inline-flex items-center gap-2">
-                    <Spinner /> Building a preview… This does not change anything on Spotify.
+                    <Spinner /> {live.loaded ? 'Building the set… This does not change anything on Spotify.' : 'Loading your current set…'}
                   </span>
                 ) : (
-                  <>No set yet. Choose a Pool and the set shape on the left. Building does not change anything on Spotify.</>
+                  <span className="flex flex-col items-center gap-3">
+                    <span>No set yet. Choose a Pool and the set shape on the left, then generate a set. This does not change anything on Spotify.</span>
+                    <Button variant="primary" disabled={!live.loaded} onClick={() => live.rebuild()}>
+                      Generate set
+                    </Button>
+                  </span>
                 )}
               </Empty>
             </Card>

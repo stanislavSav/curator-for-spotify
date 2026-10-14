@@ -110,6 +110,10 @@ _Avoid_: auto mix, AI mode
 A saved starting point for a DJ Set's settings (for example "Friday warm-up"). Built-in, or saved by the user, with or without the Pool.
 _Avoid_: preset
 
+**Current Set**:
+The DJ Set being worked on in the DJ page. It is saved automatically, and its tracks change only when the user generates, regenerates or rebuilds it.
+_Avoid_: preview, workspace
+
 **Draft**:
 A DJ Set saved in the tool but not yet created on Spotify.
 _Avoid_: unsaved set, local playlist
