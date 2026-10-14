@@ -1,0 +1,798 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-13T18:40:00Z",
+  "snapshotGeneratedAt": "2026-10-13T18:05:12Z",
+  "summary": "About 120 tracks in six clear groups: 2000s indie rock (the biggest), deep house (growing fast in the last 6 months), 90s boom bap, 70s jazz-funk with its modern heirs, trip-hop/ambient, and 80s synth-pop. Liked Songs lean older; recent plays lean house.",
+  "proposals": [
+    {
+      "id": "after-hours-downtempo",
+      "name": "After Hours Downtempo",
+      "description": "Trip-hop, ambient and slow electronics for the last hour of the night.",
+      "theme": "mood",
+      "rationale": "Massive Attack, Bonobo and Boards of Canada show up across your top artists in every time range, but these tracks are spread over three different playlists. Low energy (0.05–0.66) with a soft rise in the middle.",
+      "rules": {
+        "tags": [
+          "trip hop",
+          "downtempo",
+          "ambient"
+        ],
+        "energy": [
+          0,
+          0.66
+        ]
+      },
+      "tracks": [
+        {
+          "id": "fixture000000000000090",
+          "reason": "trip hop, energy 0.47"
+        },
+        {
+          "id": "fixture000000000000093",
+          "reason": "trip hop, energy 0.48"
+        },
+        {
+          "id": "fixture000000000000085",
+          "reason": "trip hop, energy 0.42"
+        },
+        {
+          "id": "fixture000000000000094",
+          "reason": "trip hop, energy 0.40"
+        },
+        {
+          "id": "fixture000000000000100",
+          "reason": "trip hop, energy 0.50"
+        },
+        {
+          "id": "fixture000000000000097",
+          "reason": "trip hop, energy 0.52"
+        },
+        {
+          "id": "fixture000000000000083",
+          "reason": "trip hop, energy 0.36"
+        },
+        {
+          "id": "fixture000000000000087",
+          "reason": "trip hop, energy 0.55"
+        },
+        {
+          "id": "fixture000000000000091",
+          "reason": "trip hop, energy 0.35"
+        },
+        {
+          "id": "fixture000000000000096",
+          "reason": "trip hop, energy 0.58"
+        },
+        {
+          "id": "fixture000000000000084",
+          "reason": "trip hop, energy 0.32"
+        },
+        {
+          "id": "fixture000000000000099",
+          "reason": "trip hop, energy 0.60"
+        },
+        {
+          "id": "fixture000000000000092",
+          "reason": "trip hop, energy 0.30"
+        },
+        {
+          "id": "fixture000000000000088",
+          "reason": "trip hop, energy 0.61"
+        },
+        {
+          "id": "fixture000000000000086",
+          "reason": "trip hop, energy 0.63"
+        },
+        {
+          "id": "fixture000000000000089",
+          "reason": "trip hop, energy 0.27"
+        },
+        {
+          "id": "fixture000000000000098",
+          "reason": "trip hop, energy 0.66"
+        },
+        {
+          "id": "fixture000000000000095",
+          "reason": "trip hop, energy 0.05"
+        }
+      ],
+      "confidence": 0.86
+    },
+    {
+      "id": "golden-era-boom-bap",
+      "name": "Golden Era Boom Bap",
+      "description": "East Coast and jazz-rap classics from 1989–1999, mostly 85–100 BPM.",
+      "theme": "era",
+      "rationale": "You have liked 20 hip-hop tracks from the 90s but no playlist groups them. A Tribe Called Quest and Nas are in your long-term top artists.",
+      "rules": {
+        "tags": [
+          "boom bap",
+          "jazz rap",
+          "east coast hip hop"
+        ],
+        "years": [
+          1989,
+          1999
+        ],
+        "bpm": [
+          84,
+          102
+        ]
+      },
+      "tracks": [
+        {
+          "id": "fixture000000000000051",
+          "reason": "De La Soul, 1989"
+        },
+        {
+          "id": "fixture000000000000045",
+          "reason": "A Tribe Called Quest, 1990"
+        },
+        {
+          "id": "fixture000000000000053",
+          "reason": "Pete Rock & C.L. Smooth, 1992"
+        },
+        {
+          "id": "fixture000000000000054",
+          "reason": "The Pharcyde, 1992"
+        },
+        {
+          "id": "fixture000000000000044",
+          "reason": "A Tribe Called Quest, 1993"
+        },
+        {
+          "id": "fixture000000000000050",
+          "reason": "Wu-Tang Clan, 1993"
+        },
+        {
+          "id": "fixture000000000000055",
+          "reason": "Digable Planets, 1993"
+        },
+        {
+          "id": "fixture000000000000063",
+          "reason": "Souls Of Mischief, 1993"
+        },
+        {
+          "id": "fixture000000000000046",
+          "reason": "Nas, 1994"
+        },
+        {
+          "id": "fixture000000000000047",
+          "reason": "Nas, 1994"
+        },
+        {
+          "id": "fixture000000000000049",
+          "reason": "The Notorious B.I.G., 1994"
+        },
+        {
+          "id": "fixture000000000000052",
+          "reason": "Gang Starr, 1994"
+        },
+        {
+          "id": "fixture000000000000056",
+          "reason": "Common, 1994"
+        },
+        {
+          "id": "fixture000000000000048",
+          "reason": "Mobb Deep, 1995"
+        },
+        {
+          "id": "fixture000000000000059",
+          "reason": "OutKast, 1996"
+        },
+        {
+          "id": "fixture000000000000058",
+          "reason": "Black Star, 1998"
+        },
+        {
+          "id": "fixture000000000000061",
+          "reason": "Ms. Lauryn Hill, 1998"
+        },
+        {
+          "id": "fixture000000000000057",
+          "reason": "Mos Def, 1999"
+        },
+        {
+          "id": "fixture000000000000060",
+          "reason": "Dr. Dre, 1999"
+        },
+        {
+          "id": "fixture000000000000062",
+          "reason": "The Roots, 1999"
+        }
+      ],
+      "confidence": 0.92
+    },
+    {
+      "id": "warm-house-118-126",
+      "name": "Warm House, 118–126",
+      "description": "Deep, melodic house that sits in one tempo band. Good for cooking or a slow build.",
+      "theme": "tempo",
+      "rationale": "House is your most played tag in the last 6 months (Fred again.., Bicep, Four Tet). Ordered by BPM so it flows without jumps.",
+      "rules": {
+        "tags": [
+          "deep house",
+          "house"
+        ],
+        "bpm": [
+          118,
+          126
+        ]
+      },
+      "tracks": [
+        {
+          "id": "fixture000000000000026",
+          "reason": "118 BPM"
+        },
+        {
+          "id": "fixture000000000000039",
+          "reason": "118 BPM"
+        },
+        {
+          "id": "fixture000000000000040",
+          "reason": "119 BPM"
+        },
+        {
+          "id": "fixture000000000000025",
+          "reason": "120 BPM"
+        },
+        {
+          "id": "fixture000000000000035",
+          "reason": "120 BPM"
+        },
+        {
+          "id": "fixture000000000000041",
+          "reason": "120 BPM"
+        },
+        {
+          "id": "fixture000000000000023",
+          "reason": "122 BPM"
+        },
+        {
+          "id": "fixture000000000000028",
+          "reason": "122 BPM"
+        },
+        {
+          "id": "fixture000000000000031",
+          "reason": "122 BPM"
+        },
+        {
+          "id": "fixture000000000000042",
+          "reason": "122 BPM"
+        },
+        {
+          "id": "fixture000000000000032",
+          "reason": "123 BPM"
+        },
+        {
+          "id": "fixture000000000000024",
+          "reason": "124 BPM"
+        },
+        {
+          "id": "fixture000000000000027",
+          "reason": "124 BPM"
+        },
+        {
+          "id": "fixture000000000000030",
+          "reason": "124 BPM"
+        },
+        {
+          "id": "fixture000000000000034",
+          "reason": "124 BPM"
+        },
+        {
+          "id": "fixture000000000000033",
+          "reason": "125 BPM"
+        },
+        {
+          "id": "fixture000000000000043",
+          "reason": "125 BPM"
+        },
+        {
+          "id": "fixture000000000000038",
+          "reason": "126 BPM"
+        }
+      ],
+      "confidence": 0.81
+    },
+    {
+      "id": "sunday-jazz-funk",
+      "name": "Sunday Morning Jazz-Funk",
+      "description": "Roy Ayers to Khruangbin: warm, slow grooves with a lot of keys and bass.",
+      "theme": "mood",
+      "rationale": "A small but steady cluster: 70s jazz-funk and the newer bands that sample it. Most were liked on weekends.",
+      "rules": {
+        "tags": [
+          "jazz funk",
+          "soul",
+          "neo soul"
+        ],
+        "energy": [
+          0.3,
+          0.85
+        ]
+      },
+      "tracks": [
+        {
+          "id": "fixture000000000000064",
+          "reason": "Roy Ayers Ubiquity, 1976"
+        },
+        {
+          "id": "fixture000000000000065",
+          "reason": "Herbie Hancock, 1973"
+        },
+        {
+          "id": "fixture000000000000066",
+          "reason": "Donald Byrd, 1975"
+        },
+        {
+          "id": "fixture000000000000067",
+          "reason": "Lonnie Liston Smith, 1975"
+        },
+        {
+          "id": "fixture000000000000068",
+          "reason": "Bill Withers, 1977"
+        },
+        {
+          "id": "fixture000000000000069",
+          "reason": "Marvin Gaye, 1971"
+        },
+        {
+          "id": "fixture000000000000070",
+          "reason": "Curtis Mayfield, 1970"
+        },
+        {
+          "id": "fixture000000000000071",
+          "reason": "Stevie Wonder, 1973"
+        },
+        {
+          "id": "fixture000000000000072",
+          "reason": "Minnie Riperton, 1975"
+        },
+        {
+          "id": "fixture000000000000073",
+          "reason": "The Isley Brothers, 1977"
+        },
+        {
+          "id": "fixture000000000000074",
+          "reason": "Azymuth, 1979"
+        },
+        {
+          "id": "fixture000000000000075",
+          "reason": "Khruangbin, 2018"
+        },
+        {
+          "id": "fixture000000000000076",
+          "reason": "Khruangbin, 2020"
+        },
+        {
+          "id": "fixture000000000000077",
+          "reason": "Tom Misch, 2018"
+        },
+        {
+          "id": "fixture000000000000078",
+          "reason": "Kamasi Washington, 2017"
+        },
+        {
+          "id": "fixture000000000000079",
+          "reason": "BADBADNOTGOOD, 2016"
+        },
+        {
+          "id": "fixture000000000000080",
+          "reason": "Thundercat, 2017"
+        },
+        {
+          "id": "fixture000000000000081",
+          "reason": "Erykah Badu, 1996"
+        },
+        {
+          "id": "fixture000000000000082",
+          "reason": "D'Angelo, 1995"
+        }
+      ],
+      "confidence": 0.74
+    },
+    {
+      "id": "indie-sleaze-revival",
+      "name": "Indie Sleaze Revival",
+      "description": "The 2001–2009 guitar revival: The Strokes, Bloc Party, Yeah Yeah Yeahs and friends.",
+      "theme": "era",
+      "rationale": "Your biggest cluster by count. Many of these are already in \"Indie Mix\", so this one is more a cleaned-up, time-boxed version.",
+      "rules": {
+        "tags": [
+          "indie rock",
+          "garage rock revival",
+          "post-punk revival"
+        ],
+        "years": [
+          2001,
+          2009
+        ]
+      },
+      "tracks": [
+        {
+          "id": "fixture000000000000002",
+          "reason": "The Strokes, 2001"
+        },
+        {
+          "id": "fixture000000000000022",
+          "reason": "The Strokes, 2001"
+        },
+        {
+          "id": "fixture000000000000021",
+          "reason": "Interpol, 2002"
+        },
+        {
+          "id": "fixture000000000000003",
+          "reason": "The Strokes, 2003"
+        },
+        {
+          "id": "fixture000000000000004",
+          "reason": "Yeah Yeah Yeahs, 2003"
+        },
+        {
+          "id": "fixture000000000000014",
+          "reason": "The White Stripes, 2003"
+        },
+        {
+          "id": "fixture000000000000016",
+          "reason": "Kings of Leon, 2003"
+        },
+        {
+          "id": "fixture000000000000005",
+          "reason": "Interpol, 2004"
+        },
+        {
+          "id": "fixture000000000000006",
+          "reason": "Franz Ferdinand, 2004"
+        },
+        {
+          "id": "fixture000000000000007",
+          "reason": "The Killers, 2004"
+        },
+        {
+          "id": "fixture000000000000013",
+          "reason": "Modest Mouse, 2004"
+        },
+        {
+          "id": "fixture000000000000015",
+          "reason": "Arcade Fire, 2004"
+        },
+        {
+          "id": "fixture000000000000019",
+          "reason": "The Libertines, 2004"
+        },
+        {
+          "id": "fixture000000000000001",
+          "reason": "Arctic Monkeys, 2005"
+        },
+        {
+          "id": "fixture000000000000008",
+          "reason": "Bloc Party, 2005"
+        },
+        {
+          "id": "fixture000000000000017",
+          "reason": "Bloc Party, 2005"
+        },
+        {
+          "id": "fixture000000000000009",
+          "reason": "LCD Soundsystem, 2007"
+        },
+        {
+          "id": "fixture000000000000012",
+          "reason": "MGMT, 2007"
+        },
+        {
+          "id": "fixture000000000000018",
+          "reason": "Arctic Monkeys, 2007"
+        },
+        {
+          "id": "fixture000000000000011",
+          "reason": "Vampire Weekend, 2008"
+        },
+        {
+          "id": "fixture000000000000010",
+          "reason": "Phoenix, 2009"
+        },
+        {
+          "id": "fixture000000000000020",
+          "reason": "Yeah Yeah Yeahs, 2009"
+        }
+      ],
+      "confidence": 0.58
+    },
+    {
+      "id": "neon-drive-80s",
+      "name": "Neon Drive",
+      "description": "Synth-pop and new wave from 1980–1987.",
+      "theme": "era",
+      "rationale": "Older liked songs (2016–2018) that you rarely play now. Kept as one era block.",
+      "rules": {
+        "tags": [
+          "new wave",
+          "synth-pop"
+        ],
+        "years": [
+          1980,
+          1987
+        ]
+      },
+      "tracks": [
+        {
+          "id": "fixture000000000000101",
+          "reason": "New Order, 1983"
+        },
+        {
+          "id": "fixture000000000000102",
+          "reason": "Depeche Mode, 1981"
+        },
+        {
+          "id": "fixture000000000000103",
+          "reason": "Tears for Fears, 1985"
+        },
+        {
+          "id": "fixture000000000000104",
+          "reason": "a-ha, 1985"
+        },
+        {
+          "id": "fixture000000000000105",
+          "reason": "The Cure, 1987"
+        },
+        {
+          "id": "fixture000000000000106",
+          "reason": "Talking Heads, 1980"
+        },
+        {
+          "id": "fixture000000000000107",
+          "reason": "Kate Bush, 1985"
+        },
+        {
+          "id": "fixture000000000000108",
+          "reason": "Eurythmics, 1983"
+        },
+        {
+          "id": "fixture000000000000109",
+          "reason": "Simple Minds, 1985"
+        },
+        {
+          "id": "fixture000000000000110",
+          "reason": "Pet Shop Boys, 1985"
+        },
+        {
+          "id": "fixture000000000000111",
+          "reason": "Joy Division, 1980"
+        },
+        {
+          "id": "fixture000000000000112",
+          "reason": "Soft Cell, 1981"
+        },
+        {
+          "id": "fixture000000000000113",
+          "reason": "The Human League, 1981"
+        },
+        {
+          "id": "fixture000000000000114",
+          "reason": "Echo & the Bunnymen, 1984"
+        },
+        {
+          "id": "fixture000000000000115",
+          "reason": "Duran Duran, 1982"
+        },
+        {
+          "id": "fixture000000000000116",
+          "reason": "INXS, 1987"
+        }
+      ],
+      "confidence": 0.77
+    },
+    {
+      "id": "run-club-125-plus",
+      "name": "Run Club 125+",
+      "description": "High-energy tracks at 125 BPM or faster, from three different scenes.",
+      "theme": "activity",
+      "rationale": "Mixes your energetic indie, house and 80s tracks (energy ≥ 0.7, BPM ≥ 125) into one steady-tempo running list.",
+      "rules": {
+        "bpm": [
+          125,
+          180
+        ],
+        "energy": [
+          0.7,
+          1
+        ]
+      },
+      "tracks": [
+        {
+          "id": "fixture000000000000033",
+          "reason": "125 BPM, energy 0.79"
+        },
+        {
+          "id": "fixture000000000000038",
+          "reason": "126 BPM, energy 0.71"
+        },
+        {
+          "id": "fixture000000000000108",
+          "reason": "126 BPM, energy 0.71"
+        },
+        {
+          "id": "fixture000000000000036",
+          "reason": "128 BPM, energy 0.75"
+        },
+        {
+          "id": "fixture000000000000102",
+          "reason": "128 BPM, energy 0.81"
+        },
+        {
+          "id": "fixture000000000000010",
+          "reason": "130 BPM, energy 0.81"
+        },
+        {
+          "id": "fixture000000000000029",
+          "reason": "130 BPM, energy 0.72"
+        },
+        {
+          "id": "fixture000000000000101",
+          "reason": "130 BPM, energy 0.84"
+        },
+        {
+          "id": "fixture000000000000008",
+          "reason": "136 BPM, energy 0.90"
+        },
+        {
+          "id": "fixture000000000000019",
+          "reason": "136 BPM, energy 0.85"
+        },
+        {
+          "id": "fixture000000000000015",
+          "reason": "140 BPM, energy 0.83"
+        },
+        {
+          "id": "fixture000000000000115",
+          "reason": "140 BPM, energy 0.92"
+        },
+        {
+          "id": "fixture000000000000009",
+          "reason": "142 BPM, energy 0.84"
+        },
+        {
+          "id": "fixture000000000000016",
+          "reason": "142 BPM, energy 0.88"
+        },
+        {
+          "id": "fixture000000000000111",
+          "reason": "147 BPM, energy 0.81"
+        },
+        {
+          "id": "fixture000000000000007",
+          "reason": "148 BPM, energy 0.92"
+        },
+        {
+          "id": "fixture000000000000105",
+          "reason": "152 BPM, energy 0.84"
+        },
+        {
+          "id": "fixture000000000000003",
+          "reason": "158 BPM, energy 0.88"
+        },
+        {
+          "id": "fixture000000000000104",
+          "reason": "169 BPM, energy 0.90"
+        },
+        {
+          "id": "fixture000000000000017",
+          "reason": "170 BPM, energy 0.95"
+        },
+        {
+          "id": "fixture000000000000011",
+          "reason": "175 BPM, energy 0.91"
+        }
+      ],
+      "confidence": 0.69
+    },
+    {
+      "id": "rediscover-liked-not-played",
+      "name": "Rediscover: Liked, Then Forgotten",
+      "description": "Songs you saved years ago and have not played in the last 12 months.",
+      "theme": "rediscover",
+      "rationale": "Liked before 2020, no plays in the Streaming History for 12 months, and not in any Owned Playlist.",
+      "tracks": [
+        {
+          "id": "fixture000000000000001",
+          "reason": "liked 2016-02"
+        },
+        {
+          "id": "fixture000000000000003",
+          "reason": "liked 2016-04"
+        },
+        {
+          "id": "fixture000000000000005",
+          "reason": "liked 2017-06"
+        },
+        {
+          "id": "fixture000000000000008",
+          "reason": "liked 2016-09"
+        },
+        {
+          "id": "fixture000000000000009",
+          "reason": "liked 2016-10"
+        },
+        {
+          "id": "fixture000000000000018",
+          "reason": "liked 2018-07"
+        },
+        {
+          "id": "fixture000000000000019",
+          "reason": "liked 2016-08"
+        },
+        {
+          "id": "fixture000000000000021",
+          "reason": "liked 2017-10"
+        },
+        {
+          "id": "fixture000000000000022",
+          "reason": "liked 2016-11"
+        },
+        {
+          "id": "fixture000000000000025",
+          "reason": "liked 2018-02"
+        },
+        {
+          "id": "fixture000000000000027",
+          "reason": "liked 2016-04"
+        },
+        {
+          "id": "fixture000000000000028",
+          "reason": "liked 2016-05"
+        },
+        {
+          "id": "fixture000000000000031",
+          "reason": "liked 2016-08"
+        },
+        {
+          "id": "fixture000000000000032",
+          "reason": "liked 2016-09"
+        },
+        {
+          "id": "fixture000000000000033",
+          "reason": "liked 2016-10"
+        },
+        {
+          "id": "fixture000000000000034",
+          "reason": "liked 2018-11"
+        },
+        {
+          "id": "fixture000000000000036",
+          "reason": "liked 2018-01"
+        },
+        {
+          "id": "fixture000000000000038",
+          "reason": "liked 2018-03"
+        },
+        {
+          "id": "fixture000000000000039",
+          "reason": "liked 2017-04"
+        },
+        {
+          "id": "fixture000000000000043",
+          "reason": "liked 2016-08"
+        },
+        {
+          "id": "fixture000000000000046",
+          "reason": "liked 2018-11"
+        },
+        {
+          "id": "fixture000000000000048",
+          "reason": "liked 2016-01"
+        },
+        {
+          "id": "fixture000000000000050",
+          "reason": "liked 2017-03"
+        },
+        {
+          "id": "fixture000000000000051",
+          "reason": "liked 2016-04"
+        }
+      ],
+      "confidence": 0.63
+    }
+  ]
+}

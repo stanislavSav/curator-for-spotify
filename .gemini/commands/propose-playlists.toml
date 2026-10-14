@@ -1,0 +1,8 @@
+description = "Propose new playlists from data/snapshot.json"
+prompt = """
+Follow these instructions exactly:
+
+@{.agents/skills/propose-playlists/SKILL.md}
+
+User focus for this run (may be empty): {{args}}
+"""

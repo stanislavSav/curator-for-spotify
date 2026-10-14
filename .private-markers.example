@@ -1,0 +1,12 @@
+# Personal markers for the privacy guard (scripts/check-public.mjs).
+# Copy this file to .private-markers (git-ignored) and put your own values in it.
+# One marker per line. Empty lines and lines that start with # are skipped.
+#
+# A plain line is matched as text, case-insensitive:
+Jane Example
+jane.example@example.com
+My Secret Road Trip Mix
+#
+# A line like /pattern/flags is a JavaScript regex. Use \b for numbers,
+# for example your library size with or without a thousands separator:
+/\b12,?345\b/

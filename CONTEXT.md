@@ -1,0 +1,91 @@
+# Spotify Curator
+
+A personal, local tool that studies one person's Spotify listening, proposes new playlists, removes playlists that are no longer used, and builds DJ-style ordered playlists.
+
+## Library
+
+**Library**:
+Everything the user has on Spotify: owned playlists, followed playlists, and liked songs.
+_Avoid_: collection, account
+
+**Owned Playlist**:
+A playlist the user created. Pruning it means deleting it.
+_Avoid_: my playlist
+
+**Followed Playlist**:
+A playlist someone else created and the user saved. Pruning it means unfollowing it.
+_Avoid_: saved playlist, subscribed playlist
+
+**Generated Playlist**:
+A playlist that Spotify makes for the user (Discover Weekly, Daylist, Blend, and similar). It is never a Prune Candidate.
+_Avoid_: algorithmic playlist, made-for-you
+
+**Streaming History**:
+The per-play records from Spotify's "Download your data" export. The user imports it into the tool.
+_Avoid_: listening log, scrobbles
+
+## Pruning
+
+**Prune**:
+Remove a playlist from the Library: delete it if owned, unfollow it if followed. It always needs explicit confirmation from the user.
+_Avoid_: clean up, archive
+
+**Prune Candidate**:
+A playlist that the tool suggests pruning, with the reasons it is considered unused.
+_Avoid_: dead playlist, stale playlist
+
+**Backup**:
+A local snapshot of a playlist (name, description, tracks in order), saved before it is pruned.
+_Avoid_: export, archive
+
+**Usage Evidence**:
+A dated fact showing that a playlist was used: a play from the playlist context, a play of an Exclusive Track, or an edit.
+_Avoid_: activity, signal
+
+**Exclusive Track**:
+A track that appears in only one of the user's playlists and is not in Liked Songs. Playing it counts as Usage Evidence for that playlist.
+_Avoid_: unique track
+
+## Proposing
+
+**Snapshot**:
+The synced and enriched copy of the Library that an Agent reads to write Proposals.
+_Avoid_: dump, export
+
+**Agent**:
+An AI coding agent the user runs next to the tool (for example Claude Code, Codex or Gemini CLI). It reads the Snapshot and writes Proposals.
+_Avoid_: bot, assistant, LLM
+
+**Basic Proposal**:
+A Proposal that the tool builds by rules (tags, tempo, era) when no Agent is used.
+_Avoid_: auto proposal, fallback playlist
+
+**Proposal**:
+A suggested new playlist: name, description, tracks, and the reason for each pick. The user approves, edits or drops it before it is created on Spotify.
+_Avoid_: suggestion, draft playlist
+
+## DJ
+
+**DJ Set**:
+An ordered playlist built for smooth transitions by BPM, key and energy. It is meant to be played with Spotify Mix.
+_Avoid_: DJ playlist, mix playlist
+
+**Pool**:
+The tracks that a DJ Set may draw from: chosen playlists, the filtered Library, or recent favourites.
+_Avoid_: source, seed
+
+**Energy Curve**:
+The target energy shape across a DJ Set, such as warm-up → peak → cool-down.
+_Avoid_: arc, vibe curve
+
+**Mix**:
+Spotify's in-app feature that plays a playlist with DJ-style transitions. It can only be configured inside the Spotify app.
+_Avoid_: crossfade, automix
+
+**Transition**:
+How one track hands over to the next in a Mix: a style (Auto, Fade, Rise, and others), a length in bars, and EQ or filter settings.
+_Avoid_: blend (Blend is one of the styles)
+
+**Transition Sheet**:
+The tool's per-pair list of suggested Transitions for a DJ Set. The user applies it by hand in the Spotify Mix editor.
+_Avoid_: cue sheet, setlist

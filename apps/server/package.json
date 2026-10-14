@@ -1,0 +1,23 @@
+{
+  "name": "@curator/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "snapshot": "tsx --env-file-if-exists=../../.env src/features/enrich/snapshot-cli.ts",
+    "validate-proposals": "tsx src/features/proposals/validate-cli.ts"
+  },
+  "dependencies": {
+    "@curator/shared": "*",
+    "@hono/node-server": "^2.1.5",
+    "better-sqlite3": "^13.0.3",
+    "fflate": "^0.8.3",
+    "hono": "^4.13.13",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.0"
+  }
+}

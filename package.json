@@ -1,0 +1,30 @@
+{
+  "name": "spotify-curator",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c green,cyan \"npm run dev -w @curator/server\" \"npm run dev -w @curator/web\"",
+    "demo": "node scripts/demo.mjs",
+    "build": "npm run build -w @curator/web",
+    "typecheck": "tsc -p packages/shared && tsc -p apps/server && tsc -p apps/web",
+    "test": "vitest run && node --test \"scripts/**/*.test.mjs\"",
+    "check:public": "node scripts/check-public.mjs",
+    "snapshot": "npm run snapshot -w @curator/server",
+    "validate-proposals": "npm run validate-proposals -w @curator/server",
+    "prepare": "node scripts/install-hooks.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.4"
+  },
+  "description": "Local web app + AI agent workflow to analyse your Spotify library, propose playlists, prune unused ones and build DJ sets.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12"
+  }
+}

@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.env
+data/*
+!data/.gitkeep
+*.log
+.DS_Store
+
+# Private data: never publish (see CONTRIBUTING.md › Privacy guard)
+.env.*
+!.env.example
+.private-markers
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.db
+*.db-*
+backups/
+*.pem
+*.key
+my_spotify_data*
+Spotify Account Data/
+Spotify Extended Streaming History/
+coverage/

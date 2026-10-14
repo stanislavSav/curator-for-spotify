@@ -1,0 +1,12 @@
+#!/bin/sh
+# Privacy guard: blocks a commit that holds library data, .env, keys,
+# secrets or a personal marker from .private-markers.
+# Bypass once (not recommended): git commit --no-verify
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node was not found, so the privacy guard did not run." >&2
+  echo "pre-commit: install Node 22 or run: npm run check:public" >&2
+  exit 1
+fi
+
+exec node scripts/check-public.mjs --staged

@@ -1,0 +1,2217 @@
+{
+ "note": "Fake ids, real song names. Seeds a DB for proposal tests and UI work.",
+ "tracks": [
+  {
+   "id": "fixture000000000000001",
+   "name": "I Bet You Look Good on the Dancefloor",
+   "artists": [
+    "Arctic Monkeys"
+   ],
+   "year": 2005,
+   "durationMs": 181410,
+   "bpm": 103,
+   "key": 1,
+   "mode": 1,
+   "energy": 0.94,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival"
+   ],
+   "likedAt": "2016-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000002",
+   "name": "Last Nite",
+   "artists": [
+    "The Strokes"
+   ],
+   "year": 2001,
+   "durationMs": 186129,
+   "bpm": 104,
+   "key": 0,
+   "mode": 1,
+   "energy": 0.82,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival",
+    "2000s"
+   ],
+   "likedAt": "2019-03-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000003",
+   "name": "Reptilia",
+   "artists": [
+    "The Strokes"
+   ],
+   "year": 2003,
+   "durationMs": 309707,
+   "bpm": 158,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.88,
+   "tags": [
+    "indie rock",
+    "garage rock revival"
+   ],
+   "likedAt": "2016-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000004",
+   "name": "Maps",
+   "artists": [
+    "Yeah Yeah Yeahs"
+   ],
+   "year": 2003,
+   "durationMs": 330195,
+   "bpm": 120,
+   "key": 2,
+   "mode": 1,
+   "energy": 0.62,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000005",
+   "name": "Evil",
+   "artists": [
+    "Interpol"
+   ],
+   "year": 2004,
+   "durationMs": 342589,
+   "bpm": 108,
+   "key": 9,
+   "mode": 1,
+   "energy": 0.8,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival",
+    "2000s"
+   ],
+   "likedAt": "2017-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000006",
+   "name": "Take Me Out",
+   "artists": [
+    "Franz Ferdinand"
+   ],
+   "year": 2004,
+   "durationMs": 279716,
+   "bpm": 105,
+   "key": 4,
+   "mode": 0,
+   "energy": 0.66,
+   "tags": [
+    "indie rock",
+    "garage rock revival"
+   ],
+   "likedAt": "2020-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000007",
+   "name": "Mr. Brightside",
+   "artists": [
+    "The Killers"
+   ],
+   "year": 2004,
+   "durationMs": 298162,
+   "bpm": 148,
+   "key": 1,
+   "mode": 1,
+   "energy": 0.92,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival"
+   ],
+   "likedAt": "2020-08-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000008",
+   "name": "Banquet",
+   "artists": [
+    "Bloc Party"
+   ],
+   "year": 2005,
+   "durationMs": 303146,
+   "bpm": 136,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.9,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival",
+    "2000s"
+   ],
+   "likedAt": "2016-09-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000009",
+   "name": "All My Friends",
+   "artists": [
+    "LCD Soundsystem"
+   ],
+   "year": 2007,
+   "durationMs": 350269,
+   "bpm": 142,
+   "key": 7,
+   "mode": 1,
+   "energy": 0.84,
+   "tags": [
+    "indie rock",
+    "garage rock revival"
+   ],
+   "likedAt": "2016-10-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000010",
+   "name": "Lisztomania",
+   "artists": [
+    "Phoenix"
+   ],
+   "year": 2009,
+   "durationMs": 285447,
+   "bpm": 130,
+   "key": 0,
+   "mode": 1,
+   "energy": 0.81,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival"
+   ],
+   "likedAt": "2023-11-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000011",
+   "name": "A-Punk",
+   "artists": [
+    "Vampire Weekend"
+   ],
+   "year": 2008,
+   "durationMs": 226501,
+   "bpm": 175,
+   "key": 2,
+   "mode": 1,
+   "energy": 0.91,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival",
+    "2000s"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000012",
+   "name": "Electric Feel",
+   "artists": [
+    "MGMT"
+   ],
+   "year": 2007,
+   "durationMs": 189982,
+   "bpm": 103,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.76,
+   "tags": [
+    "indie rock",
+    "garage rock revival"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000013",
+   "name": "Float On",
+   "artists": [
+    "Modest Mouse"
+   ],
+   "year": 2004,
+   "durationMs": 300261,
+   "bpm": 101,
+   "key": 6,
+   "mode": 1,
+   "energy": 0.87,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival"
+   ],
+   "likedAt": "2021-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000014",
+   "name": "Seven Nation Army",
+   "artists": [
+    "The White Stripes"
+   ],
+   "year": 2003,
+   "durationMs": 209375,
+   "bpm": 124,
+   "key": 4,
+   "mode": 0,
+   "energy": 0.46,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival",
+    "2000s"
+   ],
+   "likedAt": "2022-03-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000015",
+   "name": "Rebellion (Lies)",
+   "artists": [
+    "Arcade Fire"
+   ],
+   "year": 2004,
+   "durationMs": 197125,
+   "bpm": 140,
+   "key": 6,
+   "mode": 1,
+   "energy": 0.83,
+   "tags": [
+    "indie rock",
+    "garage rock revival"
+   ],
+   "likedAt": "2022-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000016",
+   "name": "Molly's Chambers",
+   "artists": [
+    "Kings of Leon"
+   ],
+   "year": 2003,
+   "durationMs": 279722,
+   "bpm": 142,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.88,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000017",
+   "name": "Helicopter",
+   "artists": [
+    "Bloc Party"
+   ],
+   "year": 2005,
+   "durationMs": 327050,
+   "bpm": 170,
+   "key": 11,
+   "mode": 0,
+   "energy": 0.95,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival",
+    "2000s"
+   ],
+   "likedAt": "2021-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000018",
+   "name": "Fluorescent Adolescent",
+   "artists": [
+    "Arctic Monkeys"
+   ],
+   "year": 2007,
+   "durationMs": 221761,
+   "bpm": 112,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.88,
+   "tags": [
+    "indie rock",
+    "garage rock revival"
+   ],
+   "likedAt": "2018-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000019",
+   "name": "Can't Stand Me Now",
+   "artists": [
+    "The Libertines"
+   ],
+   "year": 2004,
+   "durationMs": 332205,
+   "bpm": 136,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.85,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival"
+   ],
+   "likedAt": "2016-08-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000020",
+   "name": "Heads Will Roll",
+   "artists": [
+    "Yeah Yeah Yeahs"
+   ],
+   "year": 2009,
+   "durationMs": 187172,
+   "bpm": 120,
+   "key": 8,
+   "mode": 1,
+   "energy": 0.9,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival",
+    "2000s"
+   ],
+   "likedAt": "2022-09-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000021",
+   "name": "Obstacle 1",
+   "artists": [
+    "Interpol"
+   ],
+   "year": 2002,
+   "durationMs": 181836,
+   "bpm": 121,
+   "key": 11,
+   "mode": 0,
+   "energy": 0.79,
+   "tags": [
+    "indie rock",
+    "garage rock revival"
+   ],
+   "likedAt": "2017-10-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000022",
+   "name": "Someday",
+   "artists": [
+    "The Strokes"
+   ],
+   "year": 2001,
+   "durationMs": 313116,
+   "bpm": 118,
+   "key": 9,
+   "mode": 1,
+   "energy": 0.84,
+   "tags": [
+    "indie rock",
+    "garage rock revival",
+    "post-punk revival"
+   ],
+   "likedAt": "2016-11-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000023",
+   "name": "Latch",
+   "artists": [
+    "Disclosure",
+    "Sam Smith"
+   ],
+   "year": 2012,
+   "durationMs": 289088,
+   "bpm": 122,
+   "key": 1,
+   "mode": 1,
+   "energy": 0.73,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic",
+    "uk garage"
+   ],
+   "likedAt": "2021-12-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000024",
+   "name": "Rain",
+   "artists": [
+    "Kerri Chandler"
+   ],
+   "year": 1998,
+   "durationMs": 183661,
+   "bpm": 124,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.7,
+   "tags": [
+    "deep house",
+    "house"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000025",
+   "name": "Can You Feel It",
+   "artists": [
+    "Mr. Fingers"
+   ],
+   "year": 1986,
+   "durationMs": 184179,
+   "bpm": 120,
+   "key": 10,
+   "mode": 0,
+   "energy": 0.58,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic"
+   ],
+   "likedAt": "2018-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000026",
+   "name": "Shades of Jae",
+   "artists": [
+    "Moodymann"
+   ],
+   "year": 1999,
+   "durationMs": 188587,
+   "bpm": 118,
+   "key": 5,
+   "mode": 0,
+   "energy": 0.64,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic",
+    "uk garage"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000027",
+   "name": "Nuits Sonores",
+   "artists": [
+    "Floating Points"
+   ],
+   "year": 2014,
+   "durationMs": 227138,
+   "bpm": 124,
+   "key": 0,
+   "mode": 0,
+   "energy": 0.68,
+   "tags": [
+    "deep house",
+    "house"
+   ],
+   "likedAt": "2016-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000028",
+   "name": "Beyond Beliefs",
+   "artists": [
+    "Ben Böhmer"
+   ],
+   "year": 2019,
+   "durationMs": 328895,
+   "bpm": 122,
+   "key": 7,
+   "mode": 0,
+   "energy": 0.66,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic"
+   ],
+   "likedAt": "2016-05-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000029",
+   "name": "Glue",
+   "artists": [
+    "Bicep"
+   ],
+   "year": 2017,
+   "durationMs": 224343,
+   "bpm": 130,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.72,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic",
+    "uk garage"
+   ],
+   "likedAt": "2023-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000030",
+   "name": "Apricots",
+   "artists": [
+    "Bicep"
+   ],
+   "year": 2020,
+   "durationMs": 306296,
+   "bpm": 124,
+   "key": 5,
+   "mode": 0,
+   "energy": 0.69,
+   "tags": [
+    "deep house",
+    "house"
+   ],
+   "likedAt": "2022-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000031",
+   "name": "Brightest Lights",
+   "artists": [
+    "Lane 8"
+   ],
+   "year": 2018,
+   "durationMs": 229248,
+   "bpm": 122,
+   "key": 2,
+   "mode": 1,
+   "energy": 0.74,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic"
+   ],
+   "likedAt": "2016-08-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000032",
+   "name": "Marea (we've lost dancing)",
+   "artists": [
+    "Fred again.."
+   ],
+   "year": 2021,
+   "durationMs": 214554,
+   "bpm": 123,
+   "key": 10,
+   "mode": 1,
+   "energy": 0.71,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic",
+    "uk garage"
+   ],
+   "likedAt": "2016-09-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000033",
+   "name": "Delilah (pull me out of this)",
+   "artists": [
+    "Fred again.."
+   ],
+   "year": 2022,
+   "durationMs": 262573,
+   "bpm": 125,
+   "key": 7,
+   "mode": 1,
+   "energy": 0.79,
+   "tags": [
+    "deep house",
+    "house"
+   ],
+   "likedAt": "2016-10-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000034",
+   "name": "It Makes You Forget (Itgehane)",
+   "artists": [
+    "Peggy Gou"
+   ],
+   "year": 2018,
+   "durationMs": 242468,
+   "bpm": 124,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.77,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic"
+   ],
+   "likedAt": "2018-11-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000035",
+   "name": "Controller",
+   "artists": [
+    "Channel Tres"
+   ],
+   "year": 2018,
+   "durationMs": 323926,
+   "bpm": 120,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.62,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic",
+    "uk garage"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000036",
+   "name": "Gosh",
+   "artists": [
+    "Jamie xx"
+   ],
+   "year": 2015,
+   "durationMs": 184398,
+   "bpm": 128,
+   "key": 6,
+   "mode": 0,
+   "energy": 0.75,
+   "tags": [
+    "deep house",
+    "house"
+   ],
+   "likedAt": "2018-01-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000037",
+   "name": "Loud Places",
+   "artists": [
+    "Jamie xx",
+    "Romy"
+   ],
+   "year": 2015,
+   "durationMs": 339435,
+   "bpm": 107,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.55,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic"
+   ],
+   "likedAt": "2023-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000038",
+   "name": "Baby",
+   "artists": [
+    "Four Tet"
+   ],
+   "year": 2020,
+   "durationMs": 278228,
+   "bpm": 126,
+   "key": 8,
+   "mode": 1,
+   "energy": 0.71,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic",
+    "uk garage"
+   ],
+   "likedAt": "2018-03-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000039",
+   "name": "Two Thousand and Seventeen",
+   "artists": [
+    "Four Tet"
+   ],
+   "year": 2017,
+   "durationMs": 217202,
+   "bpm": 118,
+   "key": 3,
+   "mode": 1,
+   "energy": 0.48,
+   "tags": [
+    "deep house",
+    "house"
+   ],
+   "likedAt": "2017-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000040",
+   "name": "10%",
+   "artists": [
+    "KAYTRANADA",
+    "Kali Uchis"
+   ],
+   "year": 2019,
+   "durationMs": 262623,
+   "bpm": 119,
+   "key": 11,
+   "mode": 0,
+   "energy": 0.7,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic"
+   ],
+   "likedAt": "2020-05-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000041",
+   "name": "Inspector Norse",
+   "artists": [
+    "Todd Terje"
+   ],
+   "year": 2012,
+   "durationMs": 190734,
+   "bpm": 120,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.8,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic",
+    "uk garage"
+   ],
+   "likedAt": "2019-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000042",
+   "name": "Pick Up",
+   "artists": [
+    "DJ Koze"
+   ],
+   "year": 2018,
+   "durationMs": 273254,
+   "bpm": 122,
+   "key": 1,
+   "mode": 1,
+   "energy": 0.67,
+   "tags": [
+    "deep house",
+    "house"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000043",
+   "name": "Can't Do Without You",
+   "artists": [
+    "Caribou"
+   ],
+   "year": 2014,
+   "durationMs": 206972,
+   "bpm": 125,
+   "key": 2,
+   "mode": 1,
+   "energy": 0.63,
+   "tags": [
+    "deep house",
+    "house",
+    "electronic"
+   ],
+   "likedAt": "2016-08-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000044",
+   "name": "Electric Relaxation",
+   "artists": [
+    "A Tribe Called Quest"
+   ],
+   "year": 1993,
+   "durationMs": 195351,
+   "bpm": 94,
+   "key": 8,
+   "mode": 1,
+   "energy": 0.55,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop",
+    "jazz rap"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000045",
+   "name": "Can I Kick It?",
+   "artists": [
+    "A Tribe Called Quest"
+   ],
+   "year": 1990,
+   "durationMs": 276581,
+   "bpm": 97,
+   "key": 9,
+   "mode": 1,
+   "energy": 0.61,
+   "tags": [
+    "hip hop",
+    "boom bap"
+   ],
+   "likedAt": "2021-10-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000046",
+   "name": "N.Y. State of Mind",
+   "artists": [
+    "Nas"
+   ],
+   "year": 1994,
+   "durationMs": 265078,
+   "bpm": 84,
+   "key": 3,
+   "mode": 0,
+   "energy": 0.67,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop"
+   ],
+   "likedAt": "2018-11-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000047",
+   "name": "The World Is Yours",
+   "artists": [
+    "Nas"
+   ],
+   "year": 1994,
+   "durationMs": 285016,
+   "bpm": 90,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.62,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop",
+    "jazz rap"
+   ],
+   "likedAt": "2020-12-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000048",
+   "name": "Shook Ones, Pt. II",
+   "artists": [
+    "Mobb Deep"
+   ],
+   "year": 1995,
+   "durationMs": 263561,
+   "bpm": 92,
+   "key": 2,
+   "mode": 0,
+   "energy": 0.74,
+   "tags": [
+    "hip hop",
+    "boom bap"
+   ],
+   "likedAt": "2016-01-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000049",
+   "name": "Juicy",
+   "artists": [
+    "The Notorious B.I.G."
+   ],
+   "year": 1994,
+   "durationMs": 321154,
+   "bpm": 95,
+   "key": 10,
+   "mode": 1,
+   "energy": 0.7,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop"
+   ],
+   "likedAt": "2021-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000050",
+   "name": "C.R.E.A.M. (Cash Rules Everything Around Me)",
+   "artists": [
+    "Wu-Tang Clan"
+   ],
+   "year": 1993,
+   "durationMs": 215925,
+   "bpm": 90,
+   "key": 11,
+   "mode": 0,
+   "energy": 0.68,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop",
+    "jazz rap"
+   ],
+   "likedAt": "2017-03-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000051",
+   "name": "Me Myself and I",
+   "artists": [
+    "De La Soul"
+   ],
+   "year": 1989,
+   "durationMs": 248449,
+   "bpm": 101,
+   "key": 4,
+   "mode": 0,
+   "energy": 0.79,
+   "tags": [
+    "hip hop",
+    "boom bap"
+   ],
+   "likedAt": "2016-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000052",
+   "name": "Mass Appeal",
+   "artists": [
+    "Gang Starr"
+   ],
+   "year": 1994,
+   "durationMs": 328108,
+   "bpm": 89,
+   "key": 6,
+   "mode": 0,
+   "energy": 0.58,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop"
+   ],
+   "likedAt": "2021-05-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000053",
+   "name": "They Reminisce Over You (T.R.O.Y.)",
+   "artists": [
+    "Pete Rock & C.L. Smooth"
+   ],
+   "year": 1992,
+   "durationMs": 288424,
+   "bpm": 95,
+   "key": 7,
+   "mode": 0,
+   "energy": 0.72,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop",
+    "jazz rap"
+   ],
+   "likedAt": "2020-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000054",
+   "name": "Passin' Me By",
+   "artists": [
+    "The Pharcyde"
+   ],
+   "year": 1992,
+   "durationMs": 212005,
+   "bpm": 90,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.6,
+   "tags": [
+    "hip hop",
+    "boom bap"
+   ],
+   "likedAt": "2021-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000055",
+   "name": "Rebirth of Slick (Cool Like Dat)",
+   "artists": [
+    "Digable Planets"
+   ],
+   "year": 1993,
+   "durationMs": 242388,
+   "bpm": 102,
+   "key": 2,
+   "mode": 0,
+   "energy": 0.57,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop"
+   ],
+   "likedAt": "2020-08-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000056",
+   "name": "I Used to Love H.E.R.",
+   "artists": [
+    "Common"
+   ],
+   "year": 1994,
+   "durationMs": 248386,
+   "bpm": 92,
+   "key": 5,
+   "mode": 1,
+   "energy": 0.64,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop",
+    "jazz rap"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000057",
+   "name": "Ms. Fat Booty",
+   "artists": [
+    "Mos Def"
+   ],
+   "year": 1999,
+   "durationMs": 225021,
+   "bpm": 96,
+   "key": 0,
+   "mode": 0,
+   "energy": 0.73,
+   "tags": [
+    "hip hop",
+    "boom bap"
+   ],
+   "likedAt": "2017-10-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000058",
+   "name": "Definition",
+   "artists": [
+    "Black Star"
+   ],
+   "year": 1998,
+   "durationMs": 298819,
+   "bpm": 93,
+   "key": 10,
+   "mode": 0,
+   "energy": 0.81,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop"
+   ],
+   "likedAt": "2019-11-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000059",
+   "name": "Elevators (Me & You)",
+   "artists": [
+    "OutKast"
+   ],
+   "year": 1996,
+   "durationMs": 186433,
+   "bpm": 85,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.59,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop",
+    "jazz rap"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000060",
+   "name": "Still D.R.E.",
+   "artists": [
+    "Dr. Dre",
+    "Snoop Dogg"
+   ],
+   "year": 1999,
+   "durationMs": 325939,
+   "bpm": 93,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.78,
+   "tags": [
+    "hip hop",
+    "boom bap"
+   ],
+   "likedAt": "2022-01-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000061",
+   "name": "Doo Wop (That Thing)",
+   "artists": [
+    "Ms. Lauryn Hill"
+   ],
+   "year": 1998,
+   "durationMs": 224717,
+   "bpm": 100,
+   "key": 5,
+   "mode": 1,
+   "energy": 0.56,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop"
+   ],
+   "likedAt": "2017-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000062",
+   "name": "You Got Me",
+   "artists": [
+    "The Roots",
+    "Erykah Badu"
+   ],
+   "year": 1999,
+   "durationMs": 217941,
+   "bpm": 88,
+   "key": 3,
+   "mode": 0,
+   "energy": 0.54,
+   "tags": [
+    "hip hop",
+    "boom bap",
+    "east coast hip hop",
+    "jazz rap"
+   ],
+   "likedAt": "2019-03-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000063",
+   "name": "93 'Til Infinity",
+   "artists": [
+    "Souls Of Mischief"
+   ],
+   "year": 1993,
+   "durationMs": 312946,
+   "bpm": 87,
+   "key": 4,
+   "mode": 0,
+   "energy": 0.63,
+   "tags": [
+    "hip hop",
+    "boom bap"
+   ],
+   "likedAt": "2019-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000064",
+   "name": "Everybody Loves the Sunshine",
+   "artists": [
+    "Roy Ayers Ubiquity"
+   ],
+   "year": 1976,
+   "durationMs": 282269,
+   "bpm": 92,
+   "key": 10,
+   "mode": 0,
+   "energy": 0.38,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk"
+   ],
+   "likedAt": "2018-05-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000065",
+   "name": "Chameleon",
+   "artists": [
+    "Herbie Hancock"
+   ],
+   "year": 1973,
+   "durationMs": 241627,
+   "bpm": 96,
+   "key": 10,
+   "mode": 0,
+   "energy": 0.62,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk",
+    "neo soul"
+   ],
+   "likedAt": "2022-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000066",
+   "name": "Think Twice",
+   "artists": [
+    "Donald Byrd"
+   ],
+   "year": 1975,
+   "durationMs": 311923,
+   "bpm": 100,
+   "key": 7,
+   "mode": 1,
+   "energy": 0.55,
+   "tags": [
+    "jazz funk",
+    "soul"
+   ],
+   "likedAt": "2016-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000067",
+   "name": "Expansions",
+   "artists": [
+    "Lonnie Liston Smith"
+   ],
+   "year": 1975,
+   "durationMs": 320660,
+   "bpm": 106,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.58,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000068",
+   "name": "Lovely Day",
+   "artists": [
+    "Bill Withers"
+   ],
+   "year": 1977,
+   "durationMs": 218044,
+   "bpm": 98,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.65,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk",
+    "neo soul"
+   ],
+   "likedAt": "2018-09-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000069",
+   "name": "Inner City Blues (Make Me Wanna Holler)",
+   "artists": [
+    "Marvin Gaye"
+   ],
+   "year": 1971,
+   "durationMs": 183131,
+   "bpm": 94,
+   "key": 3,
+   "mode": 0,
+   "energy": 0.47,
+   "tags": [
+    "jazz funk",
+    "soul"
+   ],
+   "likedAt": "2018-10-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000070",
+   "name": "Move On Up",
+   "artists": [
+    "Curtis Mayfield"
+   ],
+   "year": 1970,
+   "durationMs": 212370,
+   "bpm": 141,
+   "key": 1,
+   "mode": 1,
+   "energy": 0.83,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk"
+   ],
+   "likedAt": "2023-11-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000071",
+   "name": "Golden Lady",
+   "artists": [
+    "Stevie Wonder"
+   ],
+   "year": 1973,
+   "durationMs": 302018,
+   "bpm": 104,
+   "key": 1,
+   "mode": 1,
+   "energy": 0.52,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk",
+    "neo soul"
+   ],
+   "likedAt": "2021-12-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000072",
+   "name": "Inside My Love",
+   "artists": [
+    "Minnie Riperton"
+   ],
+   "year": 1975,
+   "durationMs": 321511,
+   "bpm": 80,
+   "key": 5,
+   "mode": 1,
+   "energy": 0.33,
+   "tags": [
+    "jazz funk",
+    "soul"
+   ],
+   "likedAt": "2019-01-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000073",
+   "name": "Footsteps in the Dark, Pts. 1 & 2",
+   "artists": [
+    "The Isley Brothers"
+   ],
+   "year": 1977,
+   "durationMs": 266434,
+   "bpm": 92,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.41,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk"
+   ],
+   "likedAt": "2023-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000074",
+   "name": "Jazz Carnival",
+   "artists": [
+    "Azymuth"
+   ],
+   "year": 1979,
+   "durationMs": 216124,
+   "bpm": 118,
+   "key": 2,
+   "mode": 0,
+   "energy": 0.77,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk",
+    "neo soul"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000075",
+   "name": "Maria También",
+   "artists": [
+    "Khruangbin"
+   ],
+   "year": 2018,
+   "durationMs": 294608,
+   "bpm": 118,
+   "key": 4,
+   "mode": 0,
+   "energy": 0.69,
+   "tags": [
+    "jazz funk",
+    "soul"
+   ],
+   "likedAt": "2018-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000076",
+   "name": "Texas Sun",
+   "artists": [
+    "Khruangbin",
+    "Leon Bridges"
+   ],
+   "year": 2020,
+   "durationMs": 273123,
+   "bpm": 76,
+   "key": 9,
+   "mode": 1,
+   "energy": 0.39,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk"
+   ],
+   "likedAt": "2016-05-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000077",
+   "name": "Movie",
+   "artists": [
+    "Tom Misch"
+   ],
+   "year": 2018,
+   "durationMs": 193210,
+   "bpm": 90,
+   "key": 11,
+   "mode": 0,
+   "energy": 0.44,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk",
+    "neo soul"
+   ],
+   "likedAt": "2017-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000078",
+   "name": "Truth",
+   "artists": [
+    "Kamasi Washington"
+   ],
+   "year": 2017,
+   "durationMs": 215399,
+   "bpm": 74,
+   "key": 0,
+   "mode": 1,
+   "energy": 0.42,
+   "tags": [
+    "jazz funk",
+    "soul"
+   ],
+   "likedAt": "2022-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000079",
+   "name": "Time Moves Slow",
+   "artists": [
+    "BADBADNOTGOOD",
+    "Sam Herring"
+   ],
+   "year": 2016,
+   "durationMs": 321194,
+   "bpm": 94,
+   "key": 7,
+   "mode": 0,
+   "energy": 0.36,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000080",
+   "name": "Them Changes",
+   "artists": [
+    "Thundercat"
+   ],
+   "year": 2017,
+   "durationMs": 214892,
+   "bpm": 80,
+   "key": 4,
+   "mode": 0,
+   "energy": 0.51,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk",
+    "neo soul"
+   ],
+   "likedAt": "2020-09-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000081",
+   "name": "On & On",
+   "artists": [
+    "Erykah Badu"
+   ],
+   "year": 1996,
+   "durationMs": 302998,
+   "bpm": 90,
+   "key": 6,
+   "mode": 0,
+   "energy": 0.45,
+   "tags": [
+    "jazz funk",
+    "soul"
+   ],
+   "likedAt": "2018-10-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000082",
+   "name": "Brown Sugar",
+   "artists": [
+    "D'Angelo"
+   ],
+   "year": 1995,
+   "durationMs": 297504,
+   "bpm": 82,
+   "key": 2,
+   "mode": 0,
+   "energy": 0.49,
+   "tags": [
+    "jazz funk",
+    "soul",
+    "funk"
+   ],
+   "likedAt": "2022-11-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000083",
+   "name": "Teardrop",
+   "artists": [
+    "Massive Attack"
+   ],
+   "year": 1998,
+   "durationMs": 314666,
+   "bpm": 77,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.36,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient",
+    "electronic"
+   ],
+   "likedAt": "2021-12-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000084",
+   "name": "Glory Box",
+   "artists": [
+    "Portishead"
+   ],
+   "year": 1994,
+   "durationMs": 183692,
+   "bpm": 77,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.32,
+   "tags": [
+    "trip hop",
+    "downtempo"
+   ],
+   "likedAt": "2016-01-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000085",
+   "name": "Roygbiv",
+   "artists": [
+    "Boards of Canada"
+   ],
+   "year": 1998,
+   "durationMs": 241673,
+   "bpm": 87,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.42,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient"
+   ],
+   "likedAt": "2017-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000086",
+   "name": "Kerala",
+   "artists": [
+    "Bonobo"
+   ],
+   "year": 2017,
+   "durationMs": 309261,
+   "bpm": 122,
+   "key": 0,
+   "mode": 0,
+   "energy": 0.63,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient",
+    "electronic"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000087",
+   "name": "Cirrus",
+   "artists": [
+    "Bonobo"
+   ],
+   "year": 2013,
+   "durationMs": 184018,
+   "bpm": 115,
+   "key": 7,
+   "mode": 0,
+   "energy": 0.55,
+   "tags": [
+    "trip hop",
+    "downtempo"
+   ],
+   "likedAt": "2017-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000088",
+   "name": "Awake",
+   "artists": [
+    "Tycho"
+   ],
+   "year": 2014,
+   "durationMs": 305165,
+   "bpm": 98,
+   "key": 9,
+   "mode": 1,
+   "energy": 0.61,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient"
+   ],
+   "likedAt": "2022-05-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000089",
+   "name": "Says",
+   "artists": [
+    "Nils Frahm"
+   ],
+   "year": 2013,
+   "durationMs": 250426,
+   "bpm": null,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.27,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient",
+    "electronic"
+   ],
+   "likedAt": "2022-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000090",
+   "name": "Archangel",
+   "artists": [
+    "Burial"
+   ],
+   "year": 2007,
+   "durationMs": 313148,
+   "bpm": 139,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.47,
+   "tags": [
+    "trip hop",
+    "downtempo"
+   ],
+   "likedAt": "2023-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000091",
+   "name": "La femme d'argent",
+   "artists": [
+    "Air"
+   ],
+   "year": 1998,
+   "durationMs": 230464,
+   "bpm": 92,
+   "key": 5,
+   "mode": 0,
+   "energy": 0.35,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient"
+   ],
+   "likedAt": "2016-08-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000092",
+   "name": "In the Waiting Line",
+   "artists": [
+    "Zero 7"
+   ],
+   "year": 2001,
+   "durationMs": 344539,
+   "bpm": 84,
+   "key": 2,
+   "mode": 0,
+   "energy": 0.3,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient",
+    "electronic"
+   ],
+   "likedAt": "2019-09-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000093",
+   "name": "Lebanese Blonde",
+   "artists": [
+    "Thievery Corporation"
+   ],
+   "year": 1997,
+   "durationMs": 263301,
+   "bpm": 98,
+   "key": 0,
+   "mode": 0,
+   "energy": 0.48,
+   "tags": [
+    "trip hop",
+    "downtempo"
+   ],
+   "likedAt": "2023-10-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000094",
+   "name": "Porcelain",
+   "artists": [
+    "Moby"
+   ],
+   "year": 1999,
+   "durationMs": 355243,
+   "bpm": 96,
+   "key": 7,
+   "mode": 1,
+   "energy": 0.4,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient"
+   ],
+   "likedAt": "2016-11-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000095",
+   "name": "Avril 14th",
+   "artists": [
+    "Aphex Twin"
+   ],
+   "year": 2001,
+   "durationMs": 283191,
+   "bpm": null,
+   "key": 10,
+   "mode": 1,
+   "energy": 0.05,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient",
+    "electronic"
+   ],
+   "likedAt": "2022-12-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000096",
+   "name": "Emerald Rush",
+   "artists": [
+    "Jon Hopkins"
+   ],
+   "year": 2018,
+   "durationMs": 237449,
+   "bpm": 124,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.58,
+   "tags": [
+    "trip hop",
+    "downtempo"
+   ],
+   "likedAt": "2019-01-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000097",
+   "name": "Persona",
+   "artists": [
+    "Rival Consoles"
+   ],
+   "year": 2018,
+   "durationMs": 274505,
+   "bpm": 120,
+   "key": 7,
+   "mode": 0,
+   "energy": 0.52,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient"
+   ],
+   "likedAt": "2023-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000098",
+   "name": "Intro",
+   "artists": [
+    "The xx"
+   ],
+   "year": 2009,
+   "durationMs": 321743,
+   "bpm": 100,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.66,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient",
+    "electronic"
+   ],
+   "likedAt": "2018-03-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000099",
+   "name": "Bad Kingdom",
+   "artists": [
+    "Moderat"
+   ],
+   "year": 2013,
+   "durationMs": 340489,
+   "bpm": 126,
+   "key": 4,
+   "mode": 0,
+   "energy": 0.6,
+   "tags": [
+    "trip hop",
+    "downtempo"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000100",
+   "name": "Looped",
+   "artists": [
+    "Kiasmos"
+   ],
+   "year": 2014,
+   "durationMs": 306756,
+   "bpm": 120,
+   "key": 11,
+   "mode": 0,
+   "energy": 0.5,
+   "tags": [
+    "trip hop",
+    "downtempo",
+    "ambient"
+   ],
+   "likedAt": "2020-05-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000101",
+   "name": "Blue Monday",
+   "artists": [
+    "New Order"
+   ],
+   "year": 1983,
+   "durationMs": 267384,
+   "bpm": 130,
+   "key": 5,
+   "mode": 0,
+   "energy": 0.84,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s",
+    "post-punk"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000102",
+   "name": "Just Can't Get Enough",
+   "artists": [
+    "Depeche Mode"
+   ],
+   "year": 1981,
+   "durationMs": 301158,
+   "bpm": 128,
+   "key": 7,
+   "mode": 1,
+   "energy": 0.81,
+   "tags": [
+    "new wave",
+    "synth-pop"
+   ],
+   "likedAt": "2021-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000103",
+   "name": "Everybody Wants to Rule the World",
+   "artists": [
+    "Tears for Fears"
+   ],
+   "year": 1985,
+   "durationMs": 277881,
+   "bpm": 112,
+   "key": 7,
+   "mode": 1,
+   "energy": 0.66,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s"
+   ],
+   "likedAt": "2019-08-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000104",
+   "name": "Take On Me",
+   "artists": [
+    "a-ha"
+   ],
+   "year": 1985,
+   "durationMs": 181188,
+   "bpm": 169,
+   "key": 6,
+   "mode": 0,
+   "energy": 0.9,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s",
+    "post-punk"
+   ],
+   "likedAt": "2021-09-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000105",
+   "name": "Just Like Heaven",
+   "artists": [
+    "The Cure"
+   ],
+   "year": 1987,
+   "durationMs": 259560,
+   "bpm": 152,
+   "key": 9,
+   "mode": 1,
+   "energy": 0.84,
+   "tags": [
+    "new wave",
+    "synth-pop"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000106",
+   "name": "Once in a Lifetime",
+   "artists": [
+    "Talking Heads"
+   ],
+   "year": 1980,
+   "durationMs": 234638,
+   "bpm": 118,
+   "key": 5,
+   "mode": 1,
+   "energy": 0.75,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s"
+   ],
+   "likedAt": null
+  },
+  {
+   "id": "fixture000000000000107",
+   "name": "Running Up That Hill (A Deal with God)",
+   "artists": [
+    "Kate Bush"
+   ],
+   "year": 1985,
+   "durationMs": 266161,
+   "bpm": 108,
+   "key": 10,
+   "mode": 0,
+   "energy": 0.55,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s",
+    "post-punk"
+   ],
+   "likedAt": "2023-12-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000108",
+   "name": "Sweet Dreams (Are Made of This)",
+   "artists": [
+    "Eurythmics"
+   ],
+   "year": 1983,
+   "durationMs": 279649,
+   "bpm": 126,
+   "key": 0,
+   "mode": 0,
+   "energy": 0.71,
+   "tags": [
+    "new wave",
+    "synth-pop"
+   ],
+   "likedAt": "2020-01-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000109",
+   "name": "Don't You (Forget About Me)",
+   "artists": [
+    "Simple Minds"
+   ],
+   "year": 1985,
+   "durationMs": 240898,
+   "bpm": 111,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.8,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s"
+   ],
+   "likedAt": "2022-02-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000110",
+   "name": "West End Girls",
+   "artists": [
+    "Pet Shop Boys"
+   ],
+   "year": 1985,
+   "durationMs": 355303,
+   "bpm": 113,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.62,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s",
+    "post-punk"
+   ],
+   "likedAt": "2021-03-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000111",
+   "name": "Love Will Tear Us Apart",
+   "artists": [
+    "Joy Division"
+   ],
+   "year": 1980,
+   "durationMs": 236889,
+   "bpm": 147,
+   "key": 2,
+   "mode": 1,
+   "energy": 0.81,
+   "tags": [
+    "new wave",
+    "synth-pop"
+   ],
+   "likedAt": "2016-04-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000112",
+   "name": "Tainted Love",
+   "artists": [
+    "Soft Cell"
+   ],
+   "year": 1981,
+   "durationMs": 185835,
+   "bpm": 144,
+   "key": 0,
+   "mode": 0,
+   "energy": 0.69,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s"
+   ],
+   "likedAt": "2020-05-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000113",
+   "name": "Don't You Want Me",
+   "artists": [
+    "The Human League"
+   ],
+   "year": 1981,
+   "durationMs": 343832,
+   "bpm": 118,
+   "key": 3,
+   "mode": 1,
+   "energy": 0.73,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s",
+    "post-punk"
+   ],
+   "likedAt": "2019-06-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000114",
+   "name": "The Killing Moon",
+   "artists": [
+    "Echo & the Bunnymen"
+   ],
+   "year": 1984,
+   "durationMs": 192084,
+   "bpm": 118,
+   "key": 1,
+   "mode": 0,
+   "energy": 0.62,
+   "tags": [
+    "new wave",
+    "synth-pop"
+   ],
+   "likedAt": "2020-07-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000115",
+   "name": "Rio",
+   "artists": [
+    "Duran Duran"
+   ],
+   "year": 1982,
+   "durationMs": 191206,
+   "bpm": 140,
+   "key": 4,
+   "mode": 1,
+   "energy": 0.92,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s"
+   ],
+   "likedAt": "2021-08-14T19:22:00Z"
+  },
+  {
+   "id": "fixture000000000000116",
+   "name": "Need You Tonight",
+   "artists": [
+    "INXS"
+   ],
+   "year": 1987,
+   "durationMs": 297617,
+   "bpm": 109,
+   "key": 9,
+   "mode": 0,
+   "energy": 0.7,
+   "tags": [
+    "new wave",
+    "synth-pop",
+    "80s",
+    "post-punk"
+   ],
+   "likedAt": "2019-09-14T19:22:00Z"
+  }
+ ]
+}
